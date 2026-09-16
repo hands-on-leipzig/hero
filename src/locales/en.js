@@ -44,7 +44,7 @@ export default {
     onlySeeking: 'Only events with openings',
     otherRegion: 'Other',
     dateTbd: 'Date to be announced',
-    openRoles: 'Open roles',
+    openRoles: 'Volunteers needed',
     needsOne: '1 open role',
     needsCount: '{count} open roles',
     needsFilled: 'no open roles',

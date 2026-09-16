@@ -145,7 +145,6 @@ onMounted(loadEvents)
           </template>
           <template #detail-extra="{ venue }">
             <div class="venue-needs-detail">
-              <p class="venue-needs-detail__label">{{ t('events.openRoles') }}</p>
               <VenueNeeds :venue="venue" @select-role="(role) => openInquiry(venue, role)" />
             </div>
           </template>
@@ -262,14 +261,6 @@ onMounted(loadEvents)
 
 .venue-needs-detail {
   margin: 0.85rem 0 0;
-}
-
-.venue-needs-detail__label {
-  margin: 0 0 0.35rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .venue-detail-link {

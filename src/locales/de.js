@@ -44,7 +44,7 @@ export default {
     onlySeeking: 'Nur mit offenem Bedarf',
     otherRegion: 'Weitere',
     dateTbd: 'Termin folgt',
-    openRoles: 'Offene Rollen',
+    openRoles: 'Gesuchte Helfer:innen',
     needsOne: '1 offene Rolle',
     needsCount: '{count} offene Rollen',
     needsFilled: 'kein offener Bedarf',

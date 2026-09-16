@@ -31,6 +31,7 @@ const needsLabel = computed(() => {
     :class="{ 'venues-needs--open': venue.seeking }"
   >
     <span v-if="venue.seeking && roles.length" class="venues-needs__chips">
+      <span class="venues-needs__label">{{ t('events.openRoles') }}</span>
       <template v-if="canInquire">
         <button
           v-for="role in roles"
@@ -64,6 +65,16 @@ const needsLabel = computed(() => {
 .venues-needs__chips {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.3rem;
+}
+
+.venues-needs__label {
+  flex: 1 0 100%;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
 }
 </style>
