@@ -37,7 +37,7 @@ Copy `.env.example` to `.env`:
 Authorization Code + PKCE, public client (no secret):
 
 - **Standard flow** ON
-- **Valid redirect URIs**: `http://localhost:5175/*`, production origin `/*`
+- **Valid redirect URIs**: `http://localhost:5175/*`, `https://test.hero.hands-on-technology.org/*`, `https://hero.hands-on-technology.org/*`
 - **Web origins**: the same hosts without path
 
 Optional later: realm role `volunteer` (`hasVolunteerRole()` is already in `src/auth/keycloak.js`). The MVP does not hide any page behind that role.
@@ -52,3 +52,10 @@ Partners publish volunteer search in FLOW (“Suche nach Helfer:innen”). HERO 
 npm run build
 npm run build:test
 ```
+
+## Deploy
+
+Same pipeline as JOIN (see `deploy/README.md`):
+
+- Merge to `main` → [test.hero.hands-on-technology.org](https://test.hero.hands-on-technology.org) (`hero-test`)
+- Publish a GitHub Release → [hero.hands-on-technology.org](https://hero.hands-on-technology.org) (`hero-prod`)
