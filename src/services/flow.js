@@ -1,12 +1,16 @@
 import axios from 'axios'
 
 function flowApiBaseUrl() {
+  if (import.meta.env.DEV) {
+    return '/flow-api'
+  }
   const raw = (import.meta.env.VITE_FLOW_API_URL || '/flow-api').replace(/\/$/, '')
   return raw || '/flow-api'
 }
 
 const client = axios.create({
   baseURL: flowApiBaseUrl(),
+  withCredentials: false,
   headers: { Accept: 'application/json' },
 })
 
