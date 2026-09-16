@@ -7,9 +7,12 @@ const props = defineProps({
   venue: { type: Object, required: true },
 })
 
+const emit = defineEmits(['select-role'])
+
 const { t } = useI18n()
 
 const roles = computed(() => venueOpenRoles(props.venue))
+const canInquire = computed(() => !!props.venue.flow_event_id && props.venue.seeking && roles.value.length > 0)
 
 const needsLabel = computed(() => {
   if (props.venue.seeking) {
@@ -28,7 +31,21 @@ const needsLabel = computed(() => {
     :class="{ 'venues-needs--open': venue.seeking }"
   >
     <span v-if="venue.seeking && roles.length" class="venues-needs__chips">
-      <span v-for="role in roles" :key="role" class="role-chip">{{ role }}</span>
+      <template v-if="canInquire">
+        <button
+          v-for="role in roles"
+          :key="role"
+          type="button"
+          class="role-chip role-chip--action"
+          :title="t('events.inquireRole', { role })"
+          @click="emit('select-role', role)"
+        >
+          {{ role }}
+        </button>
+      </template>
+      <template v-else>
+        <span v-for="role in roles" :key="role" class="role-chip">{{ role }}</span>
+      </template>
     </span>
     <span v-else>{{ needsLabel }}</span>
   </span>

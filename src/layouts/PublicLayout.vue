@@ -248,7 +248,9 @@ function goHome() {
     </template>
 
     <div class="glass-app__panel" :class="{ 'glass-app__panel--embed': route.name === 'events-event' }">
-      <RouterView />
+      <div class="glass-app__panel-body">
+        <RouterView />
+      </div>
     </div>
   </AppShell>
 </template>

@@ -6,7 +6,7 @@
 - **FLOW** is for regional partners
 - **HERO** is for volunteers
 
-MVP: a public landing page and the JOIN venues catalog (map + list), with volunteer needs from FLOW overlaid on matching events (`draht_id`). The public pages load without Keycloak. SSO is only contacted when someone clicks “Sign in” (or when Keycloak redirects back after login).
+MVP: a public landing page with a SharePoint documents card (same FLOW folder listing, extracted in `@hands-on/glass/documents`) and the JOIN venues catalog (map + list), with volunteer needs from FLOW overlaid on matching events (`draht_id`). Clicking an open role opens a form that asks the regional partner. The public pages load without Keycloak. SSO is only contacted when someone clicks “Sign in” (or when Keycloak redirects back after login).
 
 ## Project setup
 

@@ -22,6 +22,9 @@ export function attachVenueNeeds(venues, openings) {
         seeking: false,
         helper_search: null,
         public_url: venue.frontendUrl || null,
+        flow_event_id: null,
+        partner: venue.partner || null,
+        region: venue.region || null,
       }
     }
     return {
@@ -29,6 +32,9 @@ export function attachVenueNeeds(venues, openings) {
       seeking: !!opening.seeking,
       helper_search: opening.helper_search ?? null,
       public_url: opening.public_url || venue.frontendUrl || null,
+      flow_event_id: opening.id ?? null,
+      partner: opening.partner || venue.partner || null,
+      region: opening.region || venue.region || null,
     }
   })
 }

@@ -7,6 +7,7 @@ import { fetchVolunteerOpenings } from '@/services/flow'
 import { fetchPublicVenues } from '@/services/publicVenues'
 import { attachVenueNeeds } from '@/utils/attachVenueNeeds'
 import VenueNeeds from '@/components/VenueNeeds.vue'
+import VolunteerInquiryModal from '@/components/VolunteerInquiryModal.vue'
 import logoFll from '@/assets/FIRSTLego_IconVert_RGB.png'
 
 const { t } = useI18n()
@@ -18,6 +19,7 @@ const venues = ref([])
 const venuesMeta = ref({})
 const selectedVenue = ref(null)
 const onlySeeking = ref(false)
+const inquiry = ref({ venue: null, role: '' })
 
 const catalogVenues = computed(() => {
   if (!onlySeeking.value) return venues.value
@@ -48,6 +50,15 @@ function openVenueDetail(venue) {
 
 function closeVenueDetail() {
   selectedVenue.value = null
+}
+
+function openInquiry(venue, role) {
+  if (!venue?.flow_event_id || !role) return
+  inquiry.value = { venue, role }
+}
+
+function closeInquiry() {
+  inquiry.value = { venue: null, role: '' }
 }
 
 async function loadEvents() {
@@ -130,12 +141,12 @@ onMounted(loadEvents)
           @close="closeVenueDetail"
         >
           <template #event-extra="{ venue }">
-            <VenueNeeds :venue="venue" />
+            <VenueNeeds :venue="venue" @select-role="(role) => openInquiry(venue, role)" />
           </template>
           <template #detail-extra="{ venue }">
             <div class="venue-needs-detail">
               <p class="venue-needs-detail__label">{{ t('events.openRoles') }}</p>
-              <VenueNeeds :venue="venue" />
+              <VenueNeeds :venue="venue" @select-role="(role) => openInquiry(venue, role)" />
             </div>
           </template>
           <template #detail-links="{ venue }">
@@ -151,6 +162,12 @@ onMounted(loadEvents)
             </a>
           </template>
         </VenuesCatalog>
+        <VolunteerInquiryModal
+          :key="`${inquiry.venue?.id || ''}-${inquiry.role}`"
+          :venue="inquiry.venue"
+          :role="inquiry.role"
+          @close="closeInquiry"
+        />
       </template>
     </main>
   </div>
