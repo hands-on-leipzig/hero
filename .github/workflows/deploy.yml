@@ -95,7 +95,7 @@ jobs:
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p $PORT" \
             dist/ \
-            ${{ secrets.TEST_DEPLOY_USER }}@${{ secrets.TEST_DEPLOY_HOST }}:hero-test/
+            ${{ secrets.TEST_DEPLOY_USER }}@${{ secrets.TEST_DEPLOY_HOST }}:public_html/hero-test/
 
   deploy-prod:
     name: Deploy to Prod
@@ -158,7 +158,7 @@ jobs:
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p $PORT" \
             dist/ \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:hero-prod/
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:public_html/hero-prod/
 
       - name: Notify release deploy by email (Microsoft Graph)
         if: always() && github.event_name == 'release' && vars.DEPLOY_NOTIFY_ENABLED == 'true'
