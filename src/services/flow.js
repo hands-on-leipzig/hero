@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getToken, isAuthenticated, updateToken } from '@/auth/keycloak'
 
 function flowApiBaseUrl() {
   if (import.meta.env.DEV) {
@@ -12,6 +13,19 @@ const client = axios.create({
   baseURL: flowApiBaseUrl(),
   withCredentials: false,
   headers: { Accept: 'application/json' },
+})
+
+client.interceptors.request.use(async (config) => {
+  if (!isAuthenticated()) return config
+  try {
+    await updateToken(30)
+  } catch (_) {}
+  const token = getToken()
+  if (token) {
+    config.headers = config.headers || {}
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
 })
 
 /**

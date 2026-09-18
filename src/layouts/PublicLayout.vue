@@ -10,8 +10,11 @@ import {
   getUserProfile,
   login,
   logout,
+  openAccount,
+  profileGaps,
 } from '@/auth/keycloak'
 import { setLocale } from '@/i18n'
+import ProfileNudge from '@/components/ProfileNudge.vue'
 import logoHero from '@/assets/HERO_v1.1.png'
 import logoFll from '@/assets/FIRSTLego_IconVert_RGB.png'
 import logoHot from '@/assets/hot.png'
@@ -24,6 +27,7 @@ const sidebarOpen = ref(false)
 const sidebarFooterRef = ref(null)
 const user = computed(() => (authenticated.value ? getUserProfile() : null))
 const identityLabel = computed(() => user.value?.name || t('common.volunteer'))
+const needsProfile = computed(() => profileGaps.value.length > 0)
 
 const navItems = [
   { name: 'home', path: '/', icon: 'bi-house-fill', labelKey: 'nav.home' },
@@ -49,6 +53,12 @@ function doLogin() {
   closeFooterMenus()
   closeSidebar()
   login()
+}
+
+function doOpenAccount() {
+  closeFooterMenus()
+  closeSidebar()
+  openAccount()
 }
 
 function doLogout() {
@@ -164,6 +174,16 @@ function goHome() {
             <span class="glass-sidebar-footer__menu-title">{{ identityLabel }}</span>
           </div>
           <button
+            v-if="needsProfile"
+            type="button"
+            class="glass-sidebar-footer__menu-item"
+            role="menuitem"
+            @click="doOpenAccount(); close()"
+          >
+            <i class="bi bi-person-gear" />
+            <span>{{ t('auth.profileNudgeCta') }}</span>
+          </button>
+          <button
             type="button"
             class="glass-sidebar-footer__menu-item glass-sidebar-footer__menu-item--danger"
             role="menuitem"
@@ -252,6 +272,7 @@ function goHome() {
 
     <div class="glass-app__panel" :class="{ 'glass-app__panel--embed': route.name === 'events-event' }">
       <div class="glass-app__panel-body">
+        <ProfileNudge v-if="route.name !== 'events-event'" />
         <RouterView />
       </div>
     </div>

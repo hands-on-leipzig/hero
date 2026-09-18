@@ -31,21 +31,46 @@ const form = reactive({
 const show = computed(() => !!props.venue && !!props.role)
 const eventName = computed(() => props.venue?.name || '')
 const partnerName = computed(() => props.venue?.partner || '')
+const profile = computed(() => (authenticated.value ? getUserProfile() : null))
 
-function prefillFromUser() {
-  const user = authenticated.value ? getUserProfile() : null
+function namesFromProfile(user) {
   const given = String(user?.givenName || '').trim()
   const family = String(user?.familyName || '').trim()
-  if (given || family) {
-    form.first_name = given
-    form.last_name = family
-  } else {
-    const name = String(user?.name || '').trim()
-    const parts = name.split(/\s+/).filter(Boolean)
-    form.first_name = parts.length > 1 ? parts.slice(0, -1).join(' ') : name
-    form.last_name = parts.length > 1 ? parts.at(-1) : ''
+  if (given || family) return { first_name: given, last_name: family }
+  const name = String(user?.name || '').trim()
+  const parts = name.split(/\s+/).filter(Boolean)
+  return {
+    first_name: parts.length > 1 ? parts.slice(0, -1).join(' ') : name,
+    last_name: parts.length > 1 ? parts.at(-1) : '',
   }
-  form.email = user?.email || ''
+}
+
+const profilePayload = computed(() => {
+  const user = profile.value
+  if (!user) return null
+  const names = namesFromProfile(user)
+  const email = String(user.email || '').trim()
+  if (!names.first_name || !names.last_name || !email) return null
+  return { ...names, email }
+})
+
+const profileReady = computed(() => !!profilePayload.value)
+
+function applyProfileToForm() {
+  const payload = profilePayload.value
+  const user = profile.value
+  const names = payload || namesFromProfile(user)
+  form.first_name = names.first_name
+  form.last_name = names.last_name
+  form.email = payload?.email || String(user?.email || '').trim()
+  form.mobile = ''
+  form.message = ''
+}
+
+function resetGuestForm() {
+  form.first_name = ''
+  form.last_name = ''
+  form.email = ''
   form.mobile = ''
   form.message = ''
 }
@@ -54,7 +79,9 @@ watch(show, (open) => {
   submitError.value = ''
   done.value = false
   submitting.value = false
-  if (open) prefillFromUser()
+  if (!open) return
+  if (authenticated.value) applyProfileToForm()
+  else resetGuestForm()
 })
 
 useModalDismiss(show, {
@@ -67,12 +94,9 @@ function onBackdropClick(e) {
 }
 
 const canSubmit = computed(() => {
-  return (
-    form.first_name.trim() &&
-    form.last_name.trim() &&
-    form.email.trim() &&
-    !submitting.value
-  )
+  if (submitting.value) return false
+  if (profilePayload.value) return true
+  return Boolean(form.first_name.trim() && form.last_name.trim() && form.email.trim())
 })
 
 async function onSubmit() {
@@ -80,15 +104,19 @@ async function onSubmit() {
   submitting.value = true
   submitError.value = ''
   try {
-    await submitVolunteerInquiry({
+    const fromProfile = profilePayload.value
+    const payload = {
       event_id: props.venue.flow_event_id,
       role: props.role,
-      first_name: form.first_name.trim(),
-      last_name: form.last_name.trim(),
-      email: form.email.trim(),
-      mobile: form.mobile.trim() || undefined,
-      message: form.message.trim() || undefined,
-    })
+      first_name: (fromProfile?.first_name || form.first_name).trim(),
+      last_name: (fromProfile?.last_name || form.last_name).trim(),
+      email: (fromProfile?.email || form.email).trim(),
+    }
+    if (!fromProfile) {
+      if (form.mobile.trim()) payload.mobile = form.mobile.trim()
+      if (form.message.trim()) payload.message = form.message.trim()
+    }
+    await submitVolunteerInquiry(payload)
     done.value = true
   } catch (err) {
     const data = err?.response?.data
@@ -117,6 +145,7 @@ async function onSubmit() {
         <div
           ref="dialogEl"
           class="inquiry-dialog liquid-surface-scope liquid-surface liquid-surface--accent"
+          :class="{ 'inquiry-dialog--confirm': profileReady && !done }"
           tabindex="-1"
           @click.stop
         >
@@ -141,6 +170,35 @@ async function onSubmit() {
               {{ t('inquiry.close') }}
             </button>
           </div>
+
+          <form v-else-if="profileReady" class="inquiry-body" @submit.prevent="onSubmit">
+            <p class="inquiry-confirm">
+              {{ t('inquiry.confirmQuestion', { role, event: eventName }) }}
+            </p>
+            <p class="inquiry-partner">
+              {{
+                partnerName
+                  ? t('inquiry.confirmFromProfilePartner', {
+                    name: profile?.name || t('common.volunteer'),
+                    email: profilePayload.email,
+                    partner: partnerName,
+                  })
+                  : t('inquiry.confirmFromProfile', {
+                    name: profile?.name || t('common.volunteer'),
+                    email: profilePayload.email,
+                  })
+              }}
+            </p>
+            <p v-if="submitError" class="inquiry-error" role="alert">{{ submitError }}</p>
+            <div class="inquiry-actions">
+              <button type="button" class="btn btn-secondary" @click="emit('close')">
+                {{ t('inquiry.cancel') }}
+              </button>
+              <button type="submit" class="btn btn-primary" :disabled="!canSubmit">
+                {{ submitting ? t('inquiry.submitting') : t('inquiry.confirm') }}
+              </button>
+            </div>
+          </form>
 
           <form v-else class="inquiry-body" @submit.prevent="onSubmit">
             <p class="inquiry-lead">
@@ -200,6 +258,9 @@ async function onSubmit() {
   overflow: auto;
   padding: 1.25rem 1.35rem 1.4rem;
 }
+.inquiry-dialog--confirm {
+  width: min(26rem, 100%);
+}
 .inquiry-head {
   display: flex;
   align-items: flex-start;
@@ -236,6 +297,12 @@ async function onSubmit() {
   font-size: var(--text-sm);
   line-height: 1.5;
   color: var(--color-text-muted);
+}
+.inquiry-confirm {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 650;
+  line-height: 1.4;
 }
 .inquiry-error {
   margin: 0;
