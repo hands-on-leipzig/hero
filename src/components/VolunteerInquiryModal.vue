@@ -34,10 +34,17 @@ const partnerName = computed(() => props.venue?.partner || '')
 
 function prefillFromUser() {
   const user = authenticated.value ? getUserProfile() : null
-  const name = String(user?.name || '').trim()
-  const parts = name.split(/\s+/)
-  form.first_name = parts.length > 1 ? parts.slice(0, -1).join(' ') : name
-  form.last_name = parts.length > 1 ? parts.at(-1) : ''
+  const given = String(user?.givenName || '').trim()
+  const family = String(user?.familyName || '').trim()
+  if (given || family) {
+    form.first_name = given
+    form.last_name = family
+  } else {
+    const name = String(user?.name || '').trim()
+    const parts = name.split(/\s+/).filter(Boolean)
+    form.first_name = parts.length > 1 ? parts.slice(0, -1).join(' ') : name
+    form.last_name = parts.length > 1 ? parts.at(-1) : ''
+  }
   form.email = user?.email || ''
   form.mobile = ''
   form.message = ''

@@ -6,7 +6,7 @@
 - **FLOW** is for regional partners
 - **HERO** is for volunteers
 
-MVP: a public landing page with a SharePoint documents card (same FLOW folder listing, extracted in `@hands-on/glass/documents`) and the JOIN venues catalog (map + list), with volunteer needs from FLOW overlaid on matching events (`draht_id`). Clicking an open role opens a form that asks the regional partner. The public pages load without Keycloak. SSO is only contacted when someone clicks “Sign in” (or when Keycloak redirects back after login).
+MVP: a public landing page and the JOIN venues catalog (map + list), with volunteer needs from FLOW overlaid on matching events (`draht_id`). Clicking an open role opens a form that asks the regional partner. SharePoint documents (same FLOW folder listing, extracted in `@hands-on/glass/documents`) are shown only after SSO login. Public pages stay usable without an account. On load, HERO silently checks Keycloak (`check-sso`); “Sign in with SSO” starts the login redirect. After login, name and email prefill the volunteer inquiry form.
 
 ## Project setup
 
@@ -37,8 +37,9 @@ Copy `.env.example` to `.env`:
 Authorization Code + PKCE, public client (no secret):
 
 - **Standard flow** ON
-- **Valid redirect URIs**: `http://localhost:5175/*`, `https://test.hero.hands-on-technology.org/*`, `https://hero.hands-on-technology.org/*`
+- **Valid redirect URIs**: `http://localhost:5175/*`, `https://test.hero.hands-on-technology.org/*`, `https://hero.hands-on-technology.org/*` (covers `/silent-check-sso.html`)
 - **Web origins**: the same hosts without path
+- **PKCE** required; no client secret on the SPA
 
 Optional later: realm role `volunteer` (`hasVolunteerRole()` is already in `src/auth/keycloak.js`). The MVP does not hide any page behind that role.
 

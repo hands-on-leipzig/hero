@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { hasOidcCallback, initKeycloak } from '@/auth/keycloak'
+import { initKeycloak } from '@/auth/keycloak'
 
 const routes = [
   {
@@ -33,14 +33,16 @@ const router = createRouter({
   },
 })
 
+let keycloakReady = false
+
 router.beforeEach(async () => {
-  // Only talk to Keycloak when returning from the login redirect.
-  if (hasOidcCallback()) {
+  if (!keycloakReady) {
     try {
-      await initKeycloak()
+      await initKeycloak({ onLoad: 'check-sso' })
     } catch (e) {
-      console.error('Keycloak callback failed', e)
+      console.error('Keycloak init failed', e)
     }
+    keycloakReady = true
   }
   return true
 })

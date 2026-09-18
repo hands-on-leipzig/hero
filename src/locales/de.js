@@ -21,6 +21,7 @@ export default {
   nav: {
     home: 'Start',
     events: 'Events',
+    login: 'Anmelden',
     tabHome: 'Start',
     tabEvents: 'Events',
     tabMore: 'Mehr',
@@ -29,7 +30,7 @@ export default {
     greeting: 'Willkommen',
     tagline: 'Die Volunteer-Plattform der FIRST LEGO League.',
     intro: 'Unter Events stehen die Veranstaltungen der Saison – inklusive offener Bedarfe, die an den Regionalpartner gehen.',
-    signedIn: 'Schön, dass du da bist, {name}.',
+    signedIn: 'Angemeldet als {name}.',
     ctaEvents: 'Veranstaltungen ansehen',
   },
   events: {

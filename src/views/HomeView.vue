@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { authenticated, getUserProfile } from '@/auth/keycloak'
+import { authenticated, getUserProfile, login } from '@/auth/keycloak'
 import SharePointDocumentsCard from '@/components/SharePointDocumentsCard.vue'
 import logoFll from '@/assets/FIRSTLego_IconVert_RGB.png'
 import logoHot from '@/assets/hot.png'
@@ -21,6 +22,24 @@ const user = computed(() => (authenticated.value ? getUserProfile() : null))
           <p v-if="authenticated" class="welcome-signed-in">
             {{ t('home.signedIn', { name: user?.name || t('common.volunteer') }) }}
           </p>
+          <div class="welcome-actions">
+            <button
+              v-if="!authenticated"
+              type="button"
+              class="btn btn-primary"
+              @click="login"
+            >
+              <i class="bi bi-box-arrow-in-right" aria-hidden="true" />
+              {{ t('auth.signInWithSso') }}
+            </button>
+            <RouterLink
+              to="/events"
+              class="btn"
+              :class="authenticated ? 'btn-primary' : 'btn-secondary'"
+            >
+              {{ t('home.ctaEvents') }}
+            </RouterLink>
+          </div>
           <p class="welcome-partner">
             <span>{{ t('common.organizedBy') }}</span>
             <a href="https://www.hands-on-technology.org" target="_blank" rel="noopener noreferrer">
@@ -34,7 +53,7 @@ const user = computed(() => (authenticated.value ? getUserProfile() : null))
       </div>
     </section>
 
-    <SharePointDocumentsCard />
+    <SharePointDocumentsCard v-if="authenticated" />
   </div>
 </template>
 
@@ -69,6 +88,13 @@ const user = computed(() => (authenticated.value ? getUserProfile() : null))
 .welcome-signed-in {
   margin: 0.85rem 0 0;
   font-weight: 600;
+}
+
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 1rem 0 0;
 }
 
 .welcome-partner {

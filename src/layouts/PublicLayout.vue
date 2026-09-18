@@ -23,6 +23,7 @@ const { t, locale } = useI18n()
 const sidebarOpen = ref(false)
 const sidebarFooterRef = ref(null)
 const user = computed(() => (authenticated.value ? getUserProfile() : null))
+const identityLabel = computed(() => user.value?.name || t('common.volunteer'))
 
 const navItems = [
   { name: 'home', path: '/', icon: 'bi-house-fill', labelKey: 'nav.home' },
@@ -141,33 +142,35 @@ function goHome() {
     <template #lower>
       <SidebarFooter
         ref="sidebarFooterRef"
-        :identity-aria-label="user?.name || t('common.volunteer')"
+        :hide-identity="!authenticated"
+        :identity-aria-label="identityLabel"
         :settings-aria-label="t('common.settings')"
       >
-        <template #identity="{ close }">
-          <template v-if="authenticated">
-            <div class="glass-sidebar-footer__menu-header">
-              <span class="glass-sidebar-footer__menu-title">{{ user?.name || t('common.volunteer') }}</span>
-            </div>
-            <button
-              type="button"
-              class="glass-sidebar-footer__menu-item glass-sidebar-footer__menu-item--danger"
-              role="menuitem"
-              @click="doLogout(); close()"
-            >
-              <i class="bi bi-box-arrow-right" />
-              <span>{{ t('auth.logout') }}</span>
-            </button>
-          </template>
+        <template v-if="!authenticated" #prepend>
           <button
-            v-else
             type="button"
-            class="glass-sidebar-footer__menu-item"
-            role="menuitem"
-            @click="doLogin(); close()"
+            class="sidebar-login-btn glass-sidebar__item"
+            @click="doLogin"
           >
-            <i class="bi bi-box-arrow-in-right" />
-            <span>{{ t('auth.signInWithSso') }}</span>
+            <span class="glass-sidebar__item-icon">
+              <i class="bi bi-box-arrow-in-right" aria-hidden="true" />
+            </span>
+            <span class="glass-sidebar__item-label">{{ t('nav.login') }}</span>
+          </button>
+        </template>
+
+        <template #identity="{ close }">
+          <div class="glass-sidebar-footer__menu-header">
+            <span class="glass-sidebar-footer__menu-title">{{ identityLabel }}</span>
+          </div>
+          <button
+            type="button"
+            class="glass-sidebar-footer__menu-item glass-sidebar-footer__menu-item--danger"
+            role="menuitem"
+            @click="doLogout(); close()"
+          >
+            <i class="bi bi-box-arrow-right" />
+            <span>{{ t('auth.logout') }}</span>
           </button>
         </template>
 
@@ -254,3 +257,31 @@ function goHome() {
     </div>
   </AppShell>
 </template>
+
+<style scoped>
+.sidebar-login-btn {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  justify-content: flex-start;
+  border: 1px solid var(--color-border);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.65rem;
+  min-height: var(--touch);
+}
+
+.sidebar-login-btn:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-accent);
+}
+
+.sidebar-login-btn .glass-sidebar__item-icon .bi {
+  font-size: 1.2rem;
+}
+</style>

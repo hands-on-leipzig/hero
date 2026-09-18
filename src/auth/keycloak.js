@@ -9,39 +9,50 @@ const keycloakConfig = {
 
 export const keycloak = new Keycloak(keycloakConfig)
 
-/** Reactive flag so the shell updates after a login redirect is processed. */
+/** Reactive flag so the shell updates after silent SSO or a login redirect. */
 export const authenticated = ref(false)
 
 let initPromise = null
+let refreshTimer = null
 
 function syncAuth() {
   authenticated.value = !!keycloak.authenticated
 }
 
-/**
- * True when the current URL is an OIDC redirect back from Keycloak.
- * Public pages must not contact Keycloak unless this is set.
- */
-export function hasOidcCallback() {
-  if (typeof window === 'undefined') return false
-  const query = new URLSearchParams(window.location.search)
-  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-  return [query, hash].some((params) => (params.has('code') && params.has('state')) || params.has('error'))
+function startTokenRefresh() {
+  if (refreshTimer) return
+  refreshTimer = window.setInterval(() => {
+    if (!keycloak.authenticated) return
+    keycloak.updateToken(30).then(syncAuth).catch(syncAuth)
+  }, 20000)
 }
 
+keycloak.onReady = syncAuth
+keycloak.onAuthSuccess = () => {
+  syncAuth()
+  startTokenRefresh()
+}
+keycloak.onAuthLogout = syncAuth
+keycloak.onAuthRefreshError = syncAuth
+
 /**
- * Initialize Keycloak. Does not run on public page load.
- * Call from login() or when completing an OIDC callback.
+ * Initialize Keycloak. Call before mounting routed views.
+ * @param {Object} options - { onLoad: 'login-required' | 'check-sso' }
+ * @returns {Promise<boolean>} true if authenticated
  */
-export function initKeycloak() {
+export function initKeycloak(options = {}) {
   if (initPromise) return initPromise
+  const { onLoad = 'check-sso' } = options
   initPromise = keycloak
     .init({
+      onLoad,
       checkLoginIframe: false,
       pkceMethod: 'S256',
+      silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
     })
     .then((ok) => {
       syncAuth()
+      if (ok) startTokenRefresh()
       return ok
     })
     .catch((err) => {
@@ -60,7 +71,7 @@ export function isAuthenticated() {
   return authenticated.value
 }
 
-/** Realm role that will gate volunteer-only pages later. Not enforced in the MVP. */
+/** Realm role that will gate volunteer-only pages later. Not enforced yet. */
 const VOLUNTEER_REALM_ROLE = 'volunteer'
 
 export function hasVolunteerRole() {
@@ -72,27 +83,47 @@ export function hasVolunteerRole() {
 export function getUserProfile() {
   if (!keycloak.authenticated || !keycloak.tokenParsed) return null
   const p = keycloak.tokenParsed
+  const givenName = String(p.given_name ?? '').trim()
+  const familyName = String(p.family_name ?? '').trim()
+  const fullName = String(p.name ?? '').trim() || [givenName, familyName].filter(Boolean).join(' ')
   return {
-    name: p.name ?? p.preferred_username ?? 'Volunteer',
+    name: fullName || p.preferred_username || 'Volunteer',
+    givenName,
+    familyName,
     email: p.email ?? '',
     username: p.preferred_username ?? '',
     picture: p.picture ?? '',
   }
 }
 
-/** User-initiated only. Public browsing never calls this. */
+function currentPageRedirectUri() {
+  return `${window.location.origin}${window.location.pathname || '/'}${window.location.search || ''}`
+}
+
 export async function login() {
-  const redirectUri = `${window.location.origin}${window.location.pathname || '/'}`
-  await initKeycloak()
-  return keycloak.login({ redirectUri })
+  const redirectUri = currentPageRedirectUri()
+  const options = { redirectUri, scope: 'openid profile email' }
+  try {
+    await initKeycloak({ onLoad: 'check-sso' })
+    return keycloak.login(options)
+  } catch (e) {
+    try {
+      const url = keycloak.createLoginUrl(options)
+      window.location.assign(url)
+    } catch (err) {
+      console.error('Keycloak login failed', err)
+      throw err
+    }
+  }
 }
 
 export function logout() {
+  const redirectUri = `${window.location.origin}/`
   if (!keycloak.authenticated) {
     authenticated.value = false
     return
   }
-  keycloak.logout({ redirectUri: `${window.location.origin}/` })
+  keycloak.logout({ redirectUri })
 }
 
 export function updateToken(minValidity = 30) {
