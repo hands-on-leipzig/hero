@@ -104,7 +104,7 @@ class AdminSharepointTest extends TestCase
             ->assertOk()
             ->assertJsonPath('config.configured', false);
 
-        $this->getJson('/api/sharepoint/status', $this->bearer())->assertJson(['configured' => false]);
+        $this->getJson('/api/sharepoint/status', $this->userBearer())->assertJson(['configured' => false]);
     }
 
     public function test_connection_test_resolves_the_folder(): void

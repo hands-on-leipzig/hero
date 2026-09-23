@@ -9,8 +9,11 @@ const keycloakConfig = {
 
 export const keycloak = new Keycloak(keycloakConfig)
 
-/** Reactive flag so the shell updates after silent SSO or a login redirect. */
+/** Signed in to Keycloak *and* allowed into HERO; the shell updates after silent SSO or a login redirect. */
 export const authenticated = ref(false)
+
+/** Signed in to Keycloak, but the account has neither `hero-user` nor `hero_admin`. */
+export const accessDenied = ref(false)
 
 /** Account profile from Keycloak (`loadUserProfile`), not only JWT claims. */
 export const userProfile = ref(null)
@@ -23,7 +26,9 @@ let refreshTimer = null
 let profilePromise = null
 
 function syncAuth() {
-  authenticated.value = !!keycloak.authenticated
+  const allowed = !!keycloak.authenticated && hasHeroAccess(keycloak.tokenParsed)
+  authenticated.value = allowed
+  accessDenied.value = !!keycloak.authenticated && !allowed
   if (!keycloak.authenticated) {
     userProfile.value = null
     profileSynced.value = true
@@ -200,18 +205,24 @@ export function hasVolunteerRole() {
   return Array.isArray(roles) && roles.includes(VOLUNTEER_REALM_ROLE)
 }
 
-/** Realm or `hero` client role; the HERO backend checks the same role on `/api/admin/*`. */
+/** `hero` client role only. The HERO backend checks the same roles on signed-in routes. */
+const HERO_USER_ROLE = 'hero-user'
+/** Realm or `hero` client role; also grants HERO access without `hero-user`. */
 const HERO_ADMIN_ROLE = 'hero_admin'
 
-export const isHeroAdmin = computed(() => {
-  if (!authenticated.value || !keycloak.tokenParsed) return false
-  const parsed = keycloak.tokenParsed
-  const roles = [
-    ...(parsed.realm_access?.roles || []),
-    ...(parsed.resource_access?.hero?.roles || []),
-  ]
-  return roles.includes(HERO_ADMIN_ROLE)
-})
+function heroClientRoles(parsed) {
+  return parsed?.resource_access?.[keycloakConfig.clientId]?.roles || []
+}
+
+function hasAdminRole(parsed) {
+  return [...(parsed?.realm_access?.roles || []), ...heroClientRoles(parsed)].includes(HERO_ADMIN_ROLE)
+}
+
+function hasHeroAccess(parsed) {
+  return heroClientRoles(parsed).includes(HERO_USER_ROLE) || hasAdminRole(parsed)
+}
+
+export const isHeroAdmin = computed(() => authenticated.value && hasAdminRole(keycloak.tokenParsed))
 
 export function getUserProfile() {
   if (!authenticated.value) return null

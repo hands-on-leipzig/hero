@@ -57,9 +57,30 @@ class SharepointDocumentsTest extends TestCase
         $this->getJson('/api/sharepoint/documents-file-stream?drive_id=drive-1&item_id=file-1')->assertUnauthorized();
     }
 
+    public function test_documents_require_hero_user_client_role(): void
+    {
+        $this->getJson('/api/sharepoint/documents', $this->bearer())
+            ->assertForbidden()
+            ->assertJson(['error' => 'Forbidden - hero-user role required']);
+
+        $this->getJson('/api/sharepoint/documents', $this->bearer(['hero-user']))->assertForbidden();
+
+        $this->getJson('/api/sharepoint/documents', $this->bearer([], [
+            'resource_access' => ['other-client' => ['roles' => ['hero-user']]],
+        ]))->assertForbidden();
+
+        $this->getJson('/api/sharepoint/documents-file-stream?drive_id=drive-1&item_id=file-1', $this->bearer())
+            ->assertForbidden();
+    }
+
+    public function test_admins_see_documents_without_hero_user(): void
+    {
+        $this->getJson('/api/sharepoint/status', $this->bearer(['hero_admin']))->assertOk();
+    }
+
     public function test_status(): void
     {
-        $this->getJson('/api/sharepoint/status', $this->bearer())
+        $this->getJson('/api/sharepoint/status', $this->userBearer())
             ->assertOk()
             ->assertExactJson([
                 'configured' => true,
@@ -70,7 +91,7 @@ class SharepointDocumentsTest extends TestCase
 
     public function test_lists_root_with_folders_first(): void
     {
-        $this->getJson('/api/sharepoint/documents', $this->bearer())
+        $this->getJson('/api/sharepoint/documents', $this->userBearer())
             ->assertOk()
             ->assertJsonPath('configured', true)
             ->assertJsonPath('breadcrumbs', [['id' => 'root', 'name' => 'HERO-Dokumente']])
@@ -82,7 +103,7 @@ class SharepointDocumentsTest extends TestCase
 
     public function test_lists_subfolder_with_breadcrumbs(): void
     {
-        $this->getJson('/api/sharepoint/documents?item_id=sub', $this->bearer())
+        $this->getJson('/api/sharepoint/documents?item_id=sub', $this->userBearer())
             ->assertOk()
             ->assertJsonPath('breadcrumbs', [
                 ['id' => 'root', 'name' => 'HERO-Dokumente'],
@@ -93,7 +114,7 @@ class SharepointDocumentsTest extends TestCase
 
     public function test_streams_files_inside_the_folder(): void
     {
-        $response = $this->get('/api/sharepoint/documents-file-stream?drive_id=drive-1&item_id=file-1', $this->bearer());
+        $response = $this->get('/api/sharepoint/documents-file-stream?drive_id=drive-1&item_id=file-1', $this->userBearer());
 
         $response->assertOk();
         $this->assertSame('%PDF', $response->getContent());
@@ -102,11 +123,11 @@ class SharepointDocumentsTest extends TestCase
 
     public function test_refuses_files_outside_the_folder(): void
     {
-        $this->getJson('/api/sharepoint/documents-file-stream?drive_id=drive-1&item_id=elsewhere', $this->bearer())
+        $this->getJson('/api/sharepoint/documents-file-stream?drive_id=drive-1&item_id=elsewhere', $this->userBearer())
             ->assertStatus(422)
             ->assertJson(['error' => 'Datei liegt nicht im konfigurierten SharePoint-Ordner.']);
 
-        $this->getJson('/api/sharepoint/documents-file-stream?drive_id=other-drive&item_id=file-1', $this->bearer())
+        $this->getJson('/api/sharepoint/documents-file-stream?drive_id=other-drive&item_id=file-1', $this->userBearer())
             ->assertStatus(422);
     }
 
@@ -114,7 +135,7 @@ class SharepointDocumentsTest extends TestCase
     {
         Setting::put(SharepointService::SETTING_FOLDER_URL, null);
 
-        $this->getJson('/api/sharepoint/documents', $this->bearer())
+        $this->getJson('/api/sharepoint/documents', $this->userBearer())
             ->assertOk()
             ->assertExactJson(['configured' => false, 'items' => [], 'breadcrumbs' => []]);
     }

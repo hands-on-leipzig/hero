@@ -6,6 +6,9 @@ return [
         'issuer' => env('KEYCLOAK_ISSUER', 'https://sso.hands-on-technology.org/realms/master'),
         // Only tokens issued to the HERO SPA are accepted (`azp`).
         'client_id' => env('KEYCLOAK_CLIENT_ID', 'hero'),
+        // Client role on `hero` only; admins pass too.
+        'user_role' => 'hero-user',
+        // Realm role or client role on `hero`.
         'admin_role' => 'hero_admin',
         'jwks_cache_seconds' => 3600,
     ],

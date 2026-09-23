@@ -6,6 +6,7 @@ import { theme, setTheme } from '@hands-on/glass/theme'
 import AppShell from '@hands-on/glass/app-shell'
 import SidebarFooter from '@hands-on/glass/sidebar-footer'
 import {
+  accessDenied,
   authenticated,
   getUserProfile,
   isHeroAdmin,
@@ -162,6 +163,18 @@ function goHome() {
       >
         <template v-if="!authenticated" #prepend>
           <button
+            v-if="accessDenied"
+            type="button"
+            class="sidebar-login-btn glass-sidebar__item"
+            @click="doLogout"
+          >
+            <span class="glass-sidebar__item-icon">
+              <i class="bi bi-box-arrow-right" aria-hidden="true" />
+            </span>
+            <span class="glass-sidebar__item-label">{{ t('auth.logout') }}</span>
+          </button>
+          <button
+            v-else
             type="button"
             class="sidebar-login-btn glass-sidebar__item"
             @click="doLogin"

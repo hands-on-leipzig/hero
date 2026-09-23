@@ -18,6 +18,9 @@ class RequireKeycloakToken
         if ($requirement === 'admin' && ! KeycloakToken::isAdmin($claims)) {
             return response()->json(['error' => 'Forbidden - hero_admin role required'], 403);
         }
+        if ($requirement === 'user' && ! KeycloakToken::isUser($claims)) {
+            return response()->json(['error' => 'Forbidden - hero-user role required'], 403);
+        }
 
         $request->attributes->set('jwt', $claims);
 

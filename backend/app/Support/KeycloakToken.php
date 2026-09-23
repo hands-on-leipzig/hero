@@ -50,12 +50,30 @@ final class KeycloakToken
      */
     public static function roles(array $claims): array
     {
-        $clientId = (string) config('hero.keycloak.client_id');
-
         return array_values(array_map('strval', array_merge(
             (array) data_get($claims, 'realm_access.roles', []),
-            (array) data_get($claims, "resource_access.{$clientId}.roles", []),
+            self::clientRoles($claims),
         )));
+    }
+
+    /**
+     * @param  array<string, mixed>  $claims
+     * @return list<string>
+     */
+    public static function clientRoles(array $claims): array
+    {
+        $clientId = (string) config('hero.keycloak.client_id');
+
+        return array_values(array_map('strval', (array) data_get($claims, "resource_access.{$clientId}.roles", [])));
+    }
+
+    /**
+     * @param  array<string, mixed>  $claims
+     */
+    public static function isUser(array $claims): bool
+    {
+        return in_array(config('hero.keycloak.user_role'), self::clientRoles($claims), true)
+            || self::isAdmin($claims);
     }
 
     /**

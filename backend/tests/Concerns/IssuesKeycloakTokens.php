@@ -60,4 +60,12 @@ trait IssuesKeycloakTokens
 
         return ['Authorization' => 'Bearer '.$token];
     }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function userBearer(): array
+    {
+        return $this->bearer([], ['resource_access' => ['hero' => ['roles' => ['hero-user']]]]);
+    }
 }

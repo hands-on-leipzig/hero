@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { authenticated, getUserProfile, login } from '@/auth/keycloak'
+import { accessDenied, authenticated, getUserProfile, login, logout } from '@/auth/keycloak'
 import SharePointDocumentsCard from '@/components/SharePointDocumentsCard.vue'
 import logoFll from '@/assets/FIRSTLego_IconVert_RGB.png'
 import logoHot from '@/assets/hot.png'
@@ -22,9 +22,21 @@ const user = computed(() => (authenticated.value ? getUserProfile() : null))
           <p v-if="authenticated" class="welcome-signed-in">
             {{ t('home.signedIn', { name: user?.name || t('common.volunteer') }) }}
           </p>
+          <p v-if="accessDenied" class="welcome-no-access">
+            {{ t('auth.noAccess') }}
+          </p>
           <div class="welcome-actions">
             <button
-              v-if="!authenticated"
+              v-if="accessDenied"
+              type="button"
+              class="btn btn-secondary"
+              @click="logout()"
+            >
+              <i class="bi bi-box-arrow-right" aria-hidden="true" />
+              {{ t('auth.logout') }}
+            </button>
+            <button
+              v-else-if="!authenticated"
               type="button"
               class="btn btn-primary"
               @click="login()"
@@ -86,6 +98,11 @@ const user = computed(() => (authenticated.value ? getUserProfile() : null))
 }
 
 .welcome-signed-in {
+  margin: 0.85rem 0 0;
+  font-weight: 600;
+}
+
+.welcome-no-access {
   margin: 0.85rem 0 0;
   font-weight: 600;
 }

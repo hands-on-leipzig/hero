@@ -15,6 +15,7 @@ export default {
   auth: {
     login: 'Anmelden',
     logout: 'Abmelden',
+    noAccess: 'Dieses Konto ist für HERO noch nicht freigeschaltet.',
     signInWithSso: 'Mit SSO anmelden',
     signedInAs: 'Angemeldet als {name}',
     profileNudge: 'Im Konto fehlen {fields}.',

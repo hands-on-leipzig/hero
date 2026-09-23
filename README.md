@@ -73,6 +73,8 @@ Authorization Code + PKCE, public client (no secret):
 
 Optional later: realm role `volunteer` (`hasVolunteerRole()` is already in `frontend/src/auth/keycloak.js`). The MVP does not hide any page behind that role.
 
+**Login:** a Keycloak account counts as signed in to HERO only with the client role `hero-user` on `hero` (a realm role of that name does not count) or with `hero_admin`. Otherwise HERO stays in its public state, shows a short hint and offers “Sign out” so another account can be used. The backend answers signed-in routes (`/api/sharepoint/*`) with 403 for such tokens.
+
 **Admin:** role `hero_admin` (realm role or client role on `hero`) shows the Admin entry and `/admin`, where the SharePoint folder for the start page is set. The backend checks the same role on `/api/admin/*`.
 
 ### FLOW

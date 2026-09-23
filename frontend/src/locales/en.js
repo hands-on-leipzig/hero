@@ -15,6 +15,7 @@ export default {
   auth: {
     login: 'Sign in',
     logout: 'Sign out',
+    noAccess: 'This account has not been given access to HERO yet.',
     signInWithSso: 'Sign in with SSO',
     signedInAs: 'Signed in as {name}',
     profileNudge: 'The account is missing {fields}.',

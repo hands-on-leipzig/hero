@@ -10,7 +10,7 @@ Route::get('/ping', fn () => response()->json(['ok' => true]));
 Route::get('/volunteer-openings', [VolunteerController::class, 'openings']);
 Route::post('/volunteer-inquiries', [VolunteerController::class, 'inquire'])->middleware('throttle:8,1');
 
-Route::middleware('keycloak')->prefix('sharepoint')->group(function () {
+Route::middleware('keycloak:user')->prefix('sharepoint')->group(function () {
     Route::get('/status', [SharepointController::class, 'status']);
     Route::get('/documents', [SharepointController::class, 'documents']);
     Route::get('/documents-file-stream', [SharepointController::class, 'stream']);
