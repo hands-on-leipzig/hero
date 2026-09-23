@@ -1,0 +1,125 @@
+# Build SPA + Laravel backend, test, rsync to the server, finalize there (same pattern as FLOW).
+# Secrets are read by prefix: TEST_DEPLOY_* for test, DEPLOY_* for prod (HOST, USER, KEY, PORT).
+
+name: Deploy (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      secret_prefix:
+        description: 'TEST_ or empty (prod)'
+        type: string
+        default: ''
+      build_script:
+        description: 'npm script for the SPA build'
+        type: string
+        required: true
+      app_dir:
+        description: 'App folder relative to the SSH user home; web root is <app_dir>/public'
+        type: string
+        required: true
+      temp_dir:
+        description: 'Upload folder relative to the SSH user home (outside the web root)'
+        type: string
+        required: true
+      app_url:
+        type: string
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets[format('{0}DEPLOY_HOST', inputs.secret_prefix)] }}
+      DEPLOY_USER: ${{ secrets[format('{0}DEPLOY_USER', inputs.secret_prefix)] }}
+      DEPLOY_PORT: ${{ secrets[format('{0}DEPLOY_PORT', inputs.secret_prefix)] }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # frontend/package.json: "@hands-on/glass": "file:../../glass" → sibling of the workspace root
+      - name: Checkout glass design system
+        uses: actions/checkout@v4
+        with:
+          repository: hands-on-leipzig/glass
+          ref: main
+          path: .ci-glass
+          token: ${{ github.token }}
+
+      - name: Link glass
+        run: |
+          GLASS_TARGET="$(dirname "$GITHUB_WORKSPACE")/glass"
+          rm -rf "$GLASS_TARGET"
+          ln -sfn "$GITHUB_WORKSPACE/.ci-glass" "$GLASS_TARGET"
+          test -f "$GLASS_TARGET/package.json"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build SPA
+        working-directory: frontend
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          npm ci
+          node -e "require('fs').writeFileSync('public/build-info.json', JSON.stringify({ builtAt: new Date().toISOString(), sha: process.env.GITHUB_SHA || '' }))"
+          npm run ${{ inputs.build_script }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Test backend
+        working-directory: backend
+        run: |
+          composer install --no-interaction --prefer-dist
+          cp .env.example .env
+          php artisan key:generate
+          php artisan test
+
+      - name: Install backend for production
+        working-directory: backend
+        run: |
+          rm .env
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Copy SPA into backend/public
+        run: |
+          rm -f backend/public/index.html
+          cp -r frontend/dist/. backend/public/
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets[format('{0}DEPLOY_KEY', inputs.secret_prefix)] }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Rsync to server
+        run: |
+          rsync -az --delete \
+            --exclude='.env' --exclude='storage/' --exclude='tests/' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p ${DEPLOY_PORT:-22}" \
+            backend/ "$DEPLOY_USER@$DEPLOY_HOST:${{ inputs.temp_dir }}/"
+
+      - name: Finalize on server
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash ~/${{ inputs.temp_dir }}/scripts/deploy-finalize.sh '${{ inputs.temp_dir }}' '${{ inputs.app_dir }}'"
+
+      - name: Health check
+        run: |
+          for i in 1 2 3 4 5; do
+            if curl -fsS --max-time 10 "${{ inputs.app_url }}/api/ping" > /dev/null; then
+              echo "✅ ${{ inputs.app_url }} is up"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "❌ ${{ inputs.app_url }}/api/ping did not respond"
+          exit 1

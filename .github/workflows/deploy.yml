@@ -1,9 +1,10 @@
-# Deploy workflow (same pattern as JOIN):
-# - Push/merge to main → TEST  https://test.hero.hands-on-technology.org  (folder: hero-test)
-# - Publish a Release  → PROD  https://hero.hands-on-technology.org       (folder: hero-prod)
+# Deploy workflow:
+# - Push/merge to main → TEST  https://test.hero.hands-on-technology.org  (app: ~/public_html/hero-test)
+# - Publish a Release  → PROD  https://hero.hands-on-technology.org       (app: ~/public_html/hero-prod)
+# The web root of each host must point to <app>/public (Laravel serves the SPA and /api).
 #
-# SSH secrets: TEST_DEPLOY_* (test) and DEPLOY_* (prod) — host, user, key, port.
-# Paths are fixed (not secrets): hero-test / hero-prod, relative to the SSH user home.
+# SSH secrets: TEST_DEPLOY_* (test) and DEPLOY_* (prod) — HOST, USER, KEY, PORT.
+# Each server keeps its own <app>/.env (see backend/.env.example).
 #
 # Optional e-mail on published GitHub Release only (repository variable DEPLOY_NOTIFY_ENABLED=true).
 # Microsoft 365 via Graph OAuth (client credentials) — no SMTP.
@@ -36,140 +37,46 @@ on:
 jobs:
   deploy-test:
     name: Deploy to Test
-    runs-on: ubuntu-latest
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.target == 'test')
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # package.json: "@hands-on/glass": "file:../glass" → sibling of workspace root
-      - name: Checkout glass design system
-        uses: actions/checkout@v4
-        with:
-          repository: hands-on-leipzig/glass
-          ref: main
-          path: .ci-glass
-          token: ${{ github.token }}
-
-      - name: Link glass for file:../glass
-        run: |
-          GLASS_TARGET="$(dirname "$GITHUB_WORKSPACE")/glass"
-          rm -rf "$GLASS_TARGET"
-          ln -sfn "$GITHUB_WORKSPACE/.ci-glass" "$GLASS_TARGET"
-          test -f "$GLASS_TARGET/package.json"
-          echo "Linked @hands-on/glass → $GLASS_TARGET"
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Write site build-info.json
-        run: |
-          node -e "require('fs').writeFileSync('public/build-info.json', JSON.stringify({ builtAt: new Date().toISOString(), sha: process.env.GITHUB_SHA || '' }))"
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-
-      - name: Build (test — uses .env + .env.test)
-        run: npm run build:test
-
-      - name: Setup SSH key
-        env:
-          DEPLOY_PORT: ${{ secrets.TEST_DEPLOY_PORT }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.TEST_DEPLOY_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          PORT="${DEPLOY_PORT:-22}"
-          ssh-keyscan -p "$PORT" -H "${{ secrets.TEST_DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
-
-      - name: Deploy to test via rsync
-        env:
-          DEPLOY_PORT: ${{ secrets.TEST_DEPLOY_PORT }}
-        run: |
-          PORT="${DEPLOY_PORT:-22}"
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p $PORT" \
-            dist/ \
-            ${{ secrets.TEST_DEPLOY_USER }}@${{ secrets.TEST_DEPLOY_HOST }}:public_html/hero-test/
+    uses: ./.github/workflows/deploy-reusable.yml
+    with:
+      secret_prefix: TEST_
+      build_script: build:test
+      app_dir: public_html/hero-test
+      temp_dir: deploy-tmp/hero-test
+      app_url: https://test.hero.hands-on-technology.org
+    secrets: inherit
 
   deploy-prod:
     name: Deploy to Prod
-    runs-on: ubuntu-latest
     if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'prod')
+    uses: ./.github/workflows/deploy-reusable.yml
+    with:
+      secret_prefix: ''
+      build_script: build
+      app_dir: public_html/hero-prod
+      temp_dir: deploy-tmp/hero-prod
+      app_url: https://hero.hands-on-technology.org
+    secrets: inherit
+
+  notify-release:
+    name: Notify release deploy
+    needs: deploy-prod
+    if: always() && github.event_name == 'release' && vars.DEPLOY_NOTIFY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # package.json: "@hands-on/glass": "file:../glass" → sibling of workspace root
-      - name: Checkout glass design system
-        uses: actions/checkout@v4
-        with:
-          repository: hands-on-leipzig/glass
-          ref: main
-          path: .ci-glass
-          token: ${{ github.token }}
-
-      - name: Link glass for file:../glass
-        run: |
-          GLASS_TARGET="$(dirname "$GITHUB_WORKSPACE")/glass"
-          rm -rf "$GLASS_TARGET"
-          ln -sfn "$GITHUB_WORKSPACE/.ci-glass" "$GLASS_TARGET"
-          test -f "$GLASS_TARGET/package.json"
-          echo "Linked @hands-on/glass → $GLASS_TARGET"
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Write site build-info.json
-        run: |
-          node -e "require('fs').writeFileSync('public/build-info.json', JSON.stringify({ builtAt: new Date().toISOString(), sha: process.env.GITHUB_SHA || '' }))"
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-
-      - name: Build
-        run: npm run build
-
-      - name: Setup SSH key
-        env:
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          PORT="${DEPLOY_PORT:-22}"
-          ssh-keyscan -p "$PORT" -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
-
-      - name: Deploy to prod via rsync
-        env:
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-        run: |
-          PORT="${DEPLOY_PORT:-22}"
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p $PORT" \
-            dist/ \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:public_html/hero-prod/
-
       - name: Notify release deploy by email (Microsoft Graph)
-        if: always() && github.event_name == 'release' && vars.DEPLOY_NOTIFY_ENABLED == 'true'
-        continue-on-error: true
         env:
           MS_TENANT_ID: ${{ secrets.DEPLOY_NOTIFY_MS_TENANT_ID }}
           MS_CLIENT_ID: ${{ secrets.DEPLOY_NOTIFY_MS_CLIENT_ID }}
           MS_CLIENT_SECRET: ${{ secrets.DEPLOY_NOTIFY_MS_CLIENT_SECRET }}
           MAIL_FROM: ${{ secrets.DEPLOY_NOTIFY_MAIL_FROM }}
           MAIL_TO: ${{ secrets.DEPLOY_NOTIFY_EMAIL_TO }}
-          JOB_STATUS: ${{ job.status }}
+          JOB_STATUS: ${{ needs.deploy-prod.result }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
