@@ -102,6 +102,8 @@ jobs:
 
       - name: Rsync to server
         run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p ~/${{ inputs.temp_dir }}"
           rsync -az --delete \
             --exclude='.env' --exclude='storage/' --exclude='tests/' \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p ${DEPLOY_PORT:-22}" \
