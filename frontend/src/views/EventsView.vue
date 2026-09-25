@@ -18,7 +18,9 @@ const openingsError = ref(false)
 const venues = ref([])
 const venuesMeta = ref({})
 const selectedVenue = ref(null)
-const onlySeeking = ref(false)
+const ONLY_SEEKING_KEY = 'hero.events.onlySeeking'
+const onlySeeking = ref(sessionStorage.getItem(ONLY_SEEKING_KEY) === '1')
+watch(onlySeeking, (value) => sessionStorage.setItem(ONLY_SEEKING_KEY, value ? '1' : '0'))
 const inquiry = ref({ venue: null, role: '' })
 
 const catalogVenues = computed(() => {
@@ -33,16 +35,27 @@ watch(catalogVenues, (list) => {
   }
 })
 
+function venueEventRoute(venue) {
+  const url = publicEventAbsoluteUrl(venue?.public_url || '')
+  const publicPath = publicEventPathFromUrl(url)
+  if (!publicPath) return null
+  return {
+    name: 'events-event',
+    params: { publicPath },
+    query: { src: url, title: venue.name || '' },
+  }
+}
+
+function venueEventHref(venue) {
+  const target = venueEventRoute(venue)
+  return target ? router.resolve(target).href : ''
+}
+
 function openVenueDetail(venue) {
   if (!venue?.id) return
-  const url = publicEventAbsoluteUrl(venue.public_url || '')
-  const publicPath = publicEventPathFromUrl(url)
-  if (publicPath) {
-    router.push({
-      name: 'events-event',
-      params: { publicPath },
-      query: { src: url, title: venue.name || '' },
-    })
+  const target = venueEventRoute(venue)
+  if (target) {
+    router.push(target)
     return
   }
   selectedVenue.value = venue
@@ -137,6 +150,8 @@ onMounted(loadEvents)
           v-if="catalogVenues.length"
           :venues="catalogVenues"
           :selected-venue="selectedVenue"
+          state-key="hero.events.catalog"
+          :event-href="venueEventHref"
           @select="openVenueDetail"
           @close="closeVenueDetail"
         >
