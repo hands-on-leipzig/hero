@@ -21,6 +21,8 @@ export const userProfile = ref(null)
 /** True after the first profile sync attempt (success or fallback). */
 export const profileSynced = ref(false)
 
+const SILENT_CHECK_TIMEOUT_MS = 5000
+
 let initPromise = null
 let refreshTimer = null
 let profilePromise = null
@@ -142,13 +144,18 @@ keycloak.onAuthRefreshError = syncAuth
 export function initKeycloak(options = {}) {
   if (initPromise) return initPromise
   const { onLoad = 'check-sso' } = options
-  initPromise = keycloak
-    .init({
-      onLoad,
-      checkLoginIframe: false,
-      pkceMethod: 'S256',
-      silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
-    })
+  const init = keycloak.init({
+    onLoad,
+    checkLoginIframe: false,
+    pkceMethod: 'S256',
+    silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+  })
+  // keycloak-js never settles when Keycloak refuses to render in the silent iframe
+  // (e.g. redirect URI not registered → error page blocked by frame-ancestors).
+  const timeout = new Promise((_, reject) => {
+    window.setTimeout(() => reject(new Error('Keycloak silent check-sso timed out')), SILENT_CHECK_TIMEOUT_MS)
+  })
+  initPromise = Promise.race([init, timeout])
     .then(async (ok) => {
       syncAuth()
       if (ok) {

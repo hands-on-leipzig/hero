@@ -160,7 +160,6 @@ onMounted(async () => {
       <i class="bi bi-folder2" aria-hidden="true" />
       {{ t('docs.title') }}
     </h2>
-    <p class="docs-card__lead">{{ t('docs.lead') }}</p>
     <DocumentsFolderList
       :configured="configured"
       :loading="loading"
@@ -204,18 +203,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 0 0.45rem;
+  margin: 0 0 1rem;
   font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: -0.015em;
 }
 .docs-card__title .bi {
   color: var(--color-accent);
-}
-.docs-card__lead {
-  margin: 0 0 1rem;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  line-height: 1.5;
 }
 </style>

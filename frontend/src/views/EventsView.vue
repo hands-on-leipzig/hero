@@ -2,10 +2,11 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { VenuesCatalog, publicEventAbsoluteUrl, publicEventPathFromUrl } from '@hands-on/glass/venues'
+import { VenuesCatalog } from '@hands-on/glass/venues'
 import { fetchVolunteerOpenings } from '@/services/api'
 import { fetchPublicVenues } from '@/services/publicVenues'
 import { attachVenueNeeds } from '@/utils/attachVenueNeeds'
+import { venueEventRoute } from '@/utils/venueEventRoute'
 import VenueNeeds from '@/components/VenueNeeds.vue'
 import VolunteerInquiryModal from '@/components/VolunteerInquiryModal.vue'
 import logoFll from '@/assets/FIRSTLego_IconVert_RGB.png'
@@ -34,17 +35,6 @@ watch(catalogVenues, (list) => {
     selectedVenue.value = null
   }
 })
-
-function venueEventRoute(venue) {
-  const url = publicEventAbsoluteUrl(venue?.public_url || '')
-  const publicPath = publicEventPathFromUrl(url)
-  if (!publicPath) return null
-  return {
-    name: 'events-event',
-    params: { publicPath },
-    query: { src: url, title: venue.name || '' },
-  }
-}
 
 function venueEventHref(venue) {
   const target = venueEventRoute(venue)
@@ -106,7 +96,6 @@ onMounted(loadEvents)
         <div class="venues-hero-layout">
           <div class="venues-hero-main">
             <h1 class="venues-title">{{ t('events.title') }}</h1>
-            <p class="hero-lead">{{ t('events.lead') }}</p>
             <label class="venues-filter">
               <input v-model="onlySeeking" type="checkbox">
               <span>{{ t('events.onlySeeking') }}</span>
