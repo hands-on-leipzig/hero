@@ -98,7 +98,10 @@ class SharepointDocumentsTest extends TestCase
             ->assertJsonPath('items.0.name', 'Vorlagen')
             ->assertJsonPath('items.0.type', 'folder')
             ->assertJsonPath('items.1.name', 'b.pdf')
-            ->assertJsonPath('items.1.drive_id', 'drive-1');
+            ->assertJsonPath('items.1.drive_id', 'drive-1')
+            // Root must keep the admin-configured share link as-is, not Graph's own
+            // (login-only) canonical webUrl for the item.
+            ->assertJsonPath('folder_web_url', 'https://example.sharepoint.com/:f:/s/hero/HeroFolder');
     }
 
     public function test_lists_subfolder_with_breadcrumbs(): void

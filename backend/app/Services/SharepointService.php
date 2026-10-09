@@ -76,6 +76,8 @@ class SharepointService
         $root = $this->resolveRootFolder($token);
         $driveId = $root['drive_id'];
 
+        $isRoot = $itemId === null || $itemId === $root['id'];
+
         if ($itemId === null) {
             $itemId = $root['id'];
             $breadcrumbs = [['id' => $itemId, 'name' => $root['name']]];
@@ -85,7 +87,13 @@ class SharepointService
         }
 
         $children = $this->fetchChildren($driveId, $itemId, $token);
-        $folderWebUrl = $this->getItemWebUrl($driveId, $itemId, $token) ?: trim((string) $this->folderUrl());
+
+        // At the root, keep the admin-configured link as-is (it may carry anonymous/guest
+        // access that Graph's own webUrl for the item does not). Only resolve a webUrl via
+        // Graph when navigating into a subfolder, where no admin link exists.
+        $folderWebUrl = $isRoot
+            ? (trim((string) $this->folderUrl()) ?: $this->getItemWebUrl($driveId, $itemId, $token))
+            : ($this->getItemWebUrl($driveId, $itemId, $token) ?: trim((string) $this->folderUrl()));
 
         return [
             'items' => $children,
