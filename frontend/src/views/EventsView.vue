@@ -20,7 +20,8 @@ const venues = ref([])
 const venuesMeta = ref({})
 const selectedVenue = ref(null)
 const ONLY_SEEKING_KEY = 'hero.events.onlySeeking'
-const onlySeeking = ref(sessionStorage.getItem(ONLY_SEEKING_KEY) === '1')
+// On by default; only off once someone explicitly switched it off before.
+const onlySeeking = ref(sessionStorage.getItem(ONLY_SEEKING_KEY) !== '0')
 watch(onlySeeking, (value) => sessionStorage.setItem(ONLY_SEEKING_KEY, value ? '1' : '0'))
 const inquiry = ref({ venue: null, role: '' })
 
@@ -96,10 +97,6 @@ onMounted(loadEvents)
         <div class="venues-hero-layout">
           <div class="venues-hero-main">
             <h1 class="venues-title">{{ t('events.title') }}</h1>
-            <label class="venues-filter">
-              <input v-model="onlySeeking" type="checkbox">
-              <span>{{ t('events.onlySeeking') }}</span>
-            </label>
           </div>
           <div class="venues-hero-logo-wrap" aria-hidden="true">
             <img :src="logoFll" alt="" class="venues-hero-logo" decoding="async">
@@ -131,10 +128,24 @@ onMounted(loadEvents)
           <i class="bi bi-info-circle" aria-hidden="true" />
           {{ t('venues.emptyListHint') }}
         </p>
-        <p v-else-if="onlySeeking && !catalogVenues.length" class="venues-hint">
-          <i class="bi bi-funnel" aria-hidden="true" />
-          {{ t('events.noSearchResults') }}
-        </p>
+        <template v-else>
+          <div class="venues-filter-bar">
+            <button
+              type="button"
+              class="venues-view-btn venues-filter-btn"
+              :class="{ 'is-active': onlySeeking }"
+              :aria-pressed="onlySeeking"
+              @click="onlySeeking = !onlySeeking"
+            >
+              <i class="bi" :class="onlySeeking ? 'bi-funnel-fill' : 'bi-funnel'" aria-hidden="true" />
+              {{ t('events.onlySeeking') }}
+            </button>
+          </div>
+          <p v-if="onlySeeking && !catalogVenues.length" class="venues-hint">
+            <i class="bi bi-funnel" aria-hidden="true" />
+            {{ t('events.noSearchResults') }}
+          </p>
+        </template>
         <VenuesCatalog
           v-if="catalogVenues.length"
           :venues="catalogVenues"
@@ -221,15 +232,19 @@ onMounted(loadEvents)
   object-fit: contain;
 }
 
-.venues-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-top: 1.1rem;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  user-select: none;
+.venues-filter-bar {
+  display: flex;
+  margin: 0 0 1.1rem;
+}
+
+.venues-filter-btn {
+  padding: 0.6rem 1.1rem;
+  font-size: var(--text-base, 1rem);
+  font-weight: 700;
+}
+
+.venues-filter-btn .bi {
+  font-size: 1rem;
 }
 
 .venues-status {

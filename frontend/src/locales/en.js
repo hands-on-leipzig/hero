@@ -42,11 +42,6 @@ export default {
     statSeeking: 'looking for volunteers',
     statRoles: 'open roles',
     statNext: 'Next event',
-    seekingTitle: 'Volunteers needed',
-    upcomingTitle: 'Coming up',
-    allEvents: 'All events',
-    moreCount: '{count} more',
-    noUpcoming: 'No upcoming events this season.',
     docsAfterLogin: 'Documents for volunteers are available after signing in.',
   },
   events: {

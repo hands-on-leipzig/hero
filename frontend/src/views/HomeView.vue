@@ -3,26 +3,21 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import BrandText from '@hands-on/glass/brand-text'
-import { VenueEventRow, sortVenues, venueDisplayName } from '@hands-on/glass/venues'
+import { sortVenues, venueDisplayName } from '@hands-on/glass/venues'
 import { accessDenied, authenticated, login, logout } from '@/auth/keycloak'
 import { fetchVolunteerOpenings } from '@/services/api'
 import { fetchPublicVenues } from '@/services/publicVenues'
 import { attachVenueNeeds, venueOpenRoles } from '@/utils/attachVenueNeeds'
 import { venueEventRoute } from '@/utils/venueEventRoute'
 import SharePointDocumentsCard from '@/components/SharePointDocumentsCard.vue'
-import VenueNeeds from '@/components/VenueNeeds.vue'
-import VolunteerInquiryModal from '@/components/VolunteerInquiryModal.vue'
 import logoFll from '@/assets/FIRSTLego_IconVert_RGB.png'
 
-const UPCOMING_LIMIT = 6
 const ONLY_SEEKING_KEY = 'hero.events.onlySeeking'
 
 const { t, locale } = useI18n()
 const router = useRouter()
 const loading = ref(true)
-const loadFailed = ref(false)
 const venues = ref([])
-const inquiry = ref({ venue: null, role: '' })
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -32,9 +27,6 @@ const upcoming = computed(() => {
 })
 
 const seeking = computed(() => upcoming.value.filter((venue) => venue.seeking))
-const showsSeeking = computed(() => seeking.value.length > 0)
-const listed = computed(() => (showsSeeking.value ? seeking.value : upcoming.value).slice(0, UPCOMING_LIMIT))
-const hiddenCount = computed(() => (showsSeeking.value ? seeking.value.length : upcoming.value.length) - listed.value.length)
 
 const openRoleCount = computed(() => seeking.value.reduce((sum, venue) => sum + venueOpenRoles(venue).length, 0))
 const nextEvent = computed(() => upcoming.value.find((venue) => venue.date) || null)
@@ -65,15 +57,6 @@ function openVenue(venue) {
   router.push(target || { name: 'events' })
 }
 
-function openInquiry(venue, role) {
-  if (!venue?.flow_event_id || !role) return
-  inquiry.value = { venue, role }
-}
-
-function closeInquiry() {
-  inquiry.value = { venue: null, role: '' }
-}
-
 onMounted(async () => {
   try {
     const venuesRes = await fetchPublicVenues()
@@ -81,11 +64,11 @@ onMounted(async () => {
     try {
       openings = (await fetchVolunteerOpenings()).data
     } catch {
-      // Without openings the list still shows the next events.
+      // Without openings the stats still show event counts.
     }
     venues.value = attachVenueNeeds(venuesRes.data, openings)
   } catch {
-    loadFailed.value = true
+    // Stats quietly fall back to zero; the events page handles the detailed error state.
   } finally {
     loading.value = false
   }
@@ -137,45 +120,6 @@ onMounted(async () => {
       </div>
     </section>
 
-    <section class="home-section">
-      <header class="home-section__head">
-        <h2 class="home-section__title">
-          {{ showsSeeking || loading ? t('home.seekingTitle') : t('home.upcomingTitle') }}
-        </h2>
-        <RouterLink to="/events" class="home-section__more">
-          {{ t('home.allEvents') }}
-          <i class="bi bi-arrow-right" aria-hidden="true" />
-        </RouterLink>
-      </header>
-
-      <div v-if="loading" class="home-status liquid-surface">
-        <i class="bi bi-arrow-repeat spin" aria-hidden="true" />
-        {{ t('venues.loading') }}
-      </div>
-      <p v-else-if="loadFailed" class="home-status liquid-surface">
-        {{ t('venues.loadError') }}
-      </p>
-      <p v-else-if="!listed.length" class="home-status liquid-surface">
-        {{ t('home.noUpcoming') }}
-      </p>
-      <template v-else>
-        <ul class="home-list liquid-surface liquid-surface--radius-lg">
-          <li v-for="venue in listed" :key="venue.id">
-            <VenueEventRow :venue="venue" :href="venueHref(venue)" @select="openVenue">
-              <VenueNeeds
-                v-if="venue.seeking"
-                :venue="venue"
-                @select-role="(role) => openInquiry(venue, role)"
-              />
-            </VenueEventRow>
-          </li>
-        </ul>
-        <p v-if="hiddenCount > 0" class="home-more-count">
-          <RouterLink to="/events">{{ t('home.moreCount', { count: hiddenCount }) }}</RouterLink>
-        </p>
-      </template>
-    </section>
-
     <SharePointDocumentsCard v-if="authenticated" />
     <div v-else-if="!accessDenied" class="home-auth liquid-surface">
       <span>{{ t('home.docsAfterLogin') }}</span>
@@ -184,13 +128,6 @@ onMounted(async () => {
         {{ t('auth.signInWithSso') }}
       </button>
     </div>
-
-    <VolunteerInquiryModal
-      :key="`${inquiry.venue?.id || ''}-${inquiry.role}`"
-      :venue="inquiry.venue"
-      :role="inquiry.role"
-      @close="closeInquiry"
-    />
   </div>
 </template>
 
@@ -304,62 +241,6 @@ div.home-stat {
   }
 }
 
-.home-section__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin: 0 0 0.75rem;
-}
-
-.home-section__title {
-  margin: 0;
-  font-size: var(--text-2xl, 1.5rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.home-section__more {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-shrink: 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-accent);
-  text-decoration: none;
-}
-
-.home-list {
-  overflow: clip;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.home-list > li + li {
-  border-top: 1px solid var(--color-border);
-}
-
-.home-more-count {
-  margin: 0.6rem 0 0;
-  font-size: var(--text-sm);
-}
-
-.home-more-count a {
-  color: var(--color-text-muted);
-}
-
-.home-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 2rem;
-  color: var(--color-text-muted);
-}
-
 .home-auth {
   display: flex;
   flex-wrap: wrap;
@@ -369,13 +250,5 @@ div.home-stat {
   padding: 0.85rem 1rem;
   font-size: var(--text-sm);
   font-weight: 600;
-}
-
-.spin {
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 </style>

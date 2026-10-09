@@ -42,11 +42,6 @@ export default {
     statSeeking: 'suchen Helfer:innen',
     statRoles: 'offene Rollen',
     statNext: 'Nächster Termin',
-    seekingTitle: 'Hier werden Helfer:innen gesucht',
-    upcomingTitle: 'Demnächst',
-    allEvents: 'Alle Veranstaltungen',
-    moreCount: '{count} weitere',
-    noUpcoming: 'Keine anstehenden Veranstaltungen in dieser Saison.',
     docsAfterLogin: 'Dokumente für Helfer:innen gibt es nach der Anmeldung.',
   },
   events: {
