@@ -36,7 +36,6 @@ export default {
     tabMore: 'Mehr',
   },
   home: {
-    overviewKicker: 'FIRST LEGO League · Helfer:innen',
     overviewTitle: 'Saisonübersicht',
     statEvents: 'anstehende Events',
     statSeeking: 'suchen Helfer:innen',

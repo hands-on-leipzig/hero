@@ -36,7 +36,6 @@ export default {
     tabMore: 'More',
   },
   home: {
-    overviewKicker: 'FIRST LEGO League · Volunteers',
     overviewTitle: 'Season overview',
     statEvents: 'upcoming events',
     statSeeking: 'looking for volunteers',

@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import BrandText from '@hands-on/glass/brand-text'
 import { sortVenues, venueDisplayName } from '@hands-on/glass/venues'
 import { accessDenied, authenticated, login, logout } from '@/auth/keycloak'
 import { fetchVolunteerOpenings } from '@/services/api'
@@ -88,7 +87,6 @@ onMounted(async () => {
     <section class="home-overview liquid-surface liquid-surface--accent" :aria-busy="loading">
       <div class="home-overview__head">
         <div>
-          <p class="home-overview__kicker"><BrandText :text="t('home.overviewKicker')" /></p>
           <h1 class="home-overview__title">{{ t('home.overviewTitle') }}</h1>
         </div>
         <img :src="logoFll" alt="" class="home-overview__logo" aria-hidden="true" decoding="async" />
@@ -151,14 +149,6 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 1rem;
   margin: 0 0 1.1rem;
-}
-
-.home-overview__kicker {
-  margin: 0 0 0.3rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--color-accent);
 }
 
 .home-overview__title {
