@@ -129,7 +129,7 @@ onMounted(loadEvents)
           {{ t('venues.emptyListHint') }}
         </p>
         <template v-else>
-          <div class="venues-filter-bar">
+          <div class="venues-filter-bar liquid-surface">
             <button
               type="button"
               class="venues-view-btn venues-filter-btn"
@@ -140,6 +140,7 @@ onMounted(loadEvents)
               <i class="bi" :class="onlySeeking ? 'bi-funnel-fill' : 'bi-funnel'" aria-hidden="true" />
               {{ t('events.onlySeeking') }}
             </button>
+            <p class="venues-filter-hint">{{ t('events.onlySeekingHint') }}</p>
           </div>
           <p v-if="onlySeeking && !catalogVenues.length" class="venues-hint">
             <i class="bi bi-funnel" aria-hidden="true" />
@@ -234,10 +235,16 @@ onMounted(loadEvents)
 
 .venues-filter-bar {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1.1rem;
   margin: 0 0 1.1rem;
+  border-radius: var(--radius-lg);
 }
 
 .venues-filter-btn {
+  flex-shrink: 0;
   padding: 0.6rem 1.1rem;
   font-size: var(--text-base, 1rem);
   font-weight: 700;
@@ -245,6 +252,14 @@ onMounted(loadEvents)
 
 .venues-filter-btn .bi {
   font-size: 1rem;
+}
+
+.venues-filter-hint {
+  flex: 1;
+  min-width: 14rem;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .venues-status {

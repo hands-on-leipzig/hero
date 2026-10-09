@@ -53,6 +53,7 @@ export default {
     searchPlaceholder: 'Search event, region or role…',
     noSearchResults: 'No matches for this search.',
     onlySeeking: 'Only events with openings',
+    onlySeekingHint: 'Shows only events that are still looking for volunteers.',
     otherRegion: 'Other',
     dateTbd: 'Date to be announced',
     openRoles: 'Volunteers needed',

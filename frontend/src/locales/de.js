@@ -53,6 +53,7 @@ export default {
     searchPlaceholder: 'Event, Region oder Rolle suchen…',
     noSearchResults: 'Keine Treffer für die Suche.',
     onlySeeking: 'Nur mit offenem Bedarf',
+    onlySeekingHint: 'Zeigt nur Veranstaltungen, die aktuell noch Helfer:innen suchen.',
     otherRegion: 'Weitere',
     dateTbd: 'Termin folgt',
     openRoles: 'Gesuchte Helfer:innen',
