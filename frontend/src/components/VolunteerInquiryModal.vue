@@ -207,7 +207,7 @@ async function onSubmit() {
               <GlassField :label="t('inquiry.mobile')" :hint="t('inquiry.mobileHint')" for-id="inquiry-mobile">
                 <GlassInput id="inquiry-mobile" v-model="form.mobile" type="tel" autocomplete="tel" />
               </GlassField>
-              <GlassField :label="t('inquiry.message')" for-id="inquiry-message">
+              <GlassField :label="t('inquiry.message')" :hint="t('inquiry.messageHint')" for-id="inquiry-message">
                 <GlassInput id="inquiry-message" v-model="form.message" type="textarea" rows="3" />
               </GlassField>
             </div>
@@ -289,7 +289,14 @@ async function onSubmit() {
 .inquiry-fields {
   display: flex;
   flex-direction: column;
-  padding: 1.1rem 1.1rem 0.25rem;
+  gap: var(--field-gap, 0.85rem);
+  padding: 1.1rem 1.1rem 1.35rem;
+}
+/* .glass-field-row only zeroes its children's own margin; without this the row
+   itself has no bottom spacing, making the gap after it collapse to 0. The
+   container `gap` above is the single source of truth for vertical rhythm. */
+.inquiry-fields :deep(.glass-field) {
+  margin-bottom: 0;
 }
 .inquiry-fields :deep(.glass-field__label),
 .inquiry-fields :deep(.glass-field__hint) {
