@@ -65,17 +65,21 @@ function resetGuestForm() {
   form.message = ''
 }
 
-watch(show, (open) => {
-  submitError.value = ''
-  profileSaveError.value = ''
-  profileSaved.value = false
-  saveToProfile.value = false
-  done.value = false
-  submitting.value = false
-  if (!open) return
-  if (authenticated.value) applyProfileToForm()
-  else resetGuestForm()
-})
+watch(
+  show,
+  (open) => {
+    submitError.value = ''
+    profileSaveError.value = ''
+    profileSaved.value = false
+    saveToProfile.value = false
+    done.value = false
+    submitting.value = false
+    if (!open) return
+    if (authenticated.value) applyProfileToForm()
+    else resetGuestForm()
+  },
+  { immediate: true },
+)
 
 useModalDismiss(show, {
   dialogRef: dialogEl,
