@@ -32,13 +32,14 @@ export async function fetchVolunteerOpenings() {
   return { data: list }
 }
 
-export async function fetchSharePointStatus() {
-  const res = await client.get('/sharepoint/status')
+export async function fetchSharePointStatus(lang = 'de') {
+  const res = await client.get('/sharepoint/status', { params: { lang: lang === 'en' ? 'en' : 'de' } })
   return res.data ?? {}
 }
 
-export async function fetchSharePointDocuments(itemId = null) {
-  const params = itemId ? { item_id: itemId } : {}
+export async function fetchSharePointDocuments(itemId = null, lang = 'de') {
+  const params = { lang: lang === 'en' ? 'en' : 'de' }
+  if (itemId) params.item_id = itemId
   const res = await client.get('/sharepoint/documents', { params })
   return res.data ?? {}
 }
@@ -61,9 +62,12 @@ export async function fetchHeroSharePointConfig() {
   return res.data ?? {}
 }
 
-/** @param {string|null} folderUrl */
-export async function updateHeroSharePointConfig(folderUrl) {
-  const res = await client.put('/admin/sharepoint', { folder_url: folderUrl || null })
+/** @param {{ de?: string|null, en?: string|null }} links */
+export async function updateHeroSharePointConfig(links) {
+  const res = await client.put('/admin/sharepoint', {
+    folder_url_de: links?.de || null,
+    folder_url_en: links?.en || null,
+  })
   return res.data?.config ?? {}
 }
 

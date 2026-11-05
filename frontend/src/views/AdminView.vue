@@ -19,9 +19,19 @@ const saveError = ref('')
 const notice = ref('')
 const testResult = ref(null)
 const config = ref({})
-const folderUrl = ref('')
+const folderUrlDe = ref('')
+const folderUrlEn = ref('')
 
-const dirty = computed(() => (folderUrl.value.trim() || null) !== (config.value.folder_url || null))
+const dirty = computed(() => {
+  const de = folderUrlDe.value.trim() || null
+  const en = folderUrlEn.value.trim() || null
+  const storedDe = config.value.folder_url_de || null
+  const storedEn = config.value.folder_url_en || null
+  const legacy = config.value.folder_url || null
+  const hasLanguageLink = Boolean(storedDe || storedEn)
+  const baselineDe = storedDe || (hasLanguageLink ? null : legacy)
+  return de !== baselineDe || en !== storedEn
+})
 
 function errorText(err, fallback) {
   const data = err?.response?.data
@@ -31,7 +41,10 @@ function errorText(err, fallback) {
 
 function applyConfig(next) {
   config.value = next || {}
-  folderUrl.value = config.value.folder_url || ''
+  const storedDe = config.value.folder_url_de || ''
+  const storedEn = config.value.folder_url_en || ''
+  folderUrlDe.value = storedDe || (storedEn ? '' : (config.value.folder_url || ''))
+  folderUrlEn.value = storedEn
 }
 
 async function load() {
@@ -52,7 +65,10 @@ async function save() {
   notice.value = ''
   testResult.value = null
   try {
-    applyConfig(await updateHeroSharePointConfig(folderUrl.value.trim()))
+    applyConfig(await updateHeroSharePointConfig({
+      de: folderUrlDe.value.trim(),
+      en: folderUrlEn.value.trim(),
+    }))
     notice.value = t('admin.saved')
   } catch (err) {
     saveError.value = errorText(err, t('admin.saveError'))
@@ -67,7 +83,12 @@ async function test() {
   testResult.value = null
   try {
     const result = await testHeroSharePointConnection()
-    testResult.value = { ok: true, text: t('admin.testOk', { folder: result.folder_name || '–', count: result.item_count ?? 0 }) }
+    if (result.success === false) {
+      const failed = [result.languages?.de, result.languages?.en].find((row) => row && row.success === false)
+      testResult.value = { ok: false, text: failed?.error || result.error || t('admin.testError') }
+    } else {
+      testResult.value = { ok: true, text: t('admin.testOk', { folder: result.folder_name || '–', count: result.item_count ?? 0 }) }
+    }
     applyConfig(await fetchHeroSharePointConfig())
   } catch (err) {
     testResult.value = { ok: false, text: errorText(err, t('admin.testError')) }
@@ -110,14 +131,27 @@ onMounted(load)
         </p>
 
         <GlassField
-          :label="t('admin.folderUrl')"
+          :label="t('admin.folderUrlDe')"
           :hint="t('admin.folderUrlHint')"
           :error="saveError"
-          for-id="hero-sharepoint-folder"
+          for-id="hero-sharepoint-folder-de"
         >
           <GlassInput
-            id="hero-sharepoint-folder"
-            v-model="folderUrl"
+            id="hero-sharepoint-folder-de"
+            v-model="folderUrlDe"
+            type="url"
+            placeholder="https://….sharepoint.com/:f:/s/…"
+            autocomplete="off"
+          />
+        </GlassField>
+
+        <GlassField
+          :label="t('admin.folderUrlEn')"
+          for-id="hero-sharepoint-folder-en"
+        >
+          <GlassInput
+            id="hero-sharepoint-folder-en"
+            v-model="folderUrlEn"
             type="url"
             placeholder="https://….sharepoint.com/:f:/s/…"
             autocomplete="off"
@@ -127,7 +161,7 @@ onMounted(load)
         <p v-if="config.folder_name && !dirty" class="admin-meta">
           {{ t('admin.currentFolder', { folder: config.folder_name }) }}
         </p>
-        <p v-else-if="!config.folder_url && !dirty" class="admin-meta">{{ t('admin.off') }}</p>
+        <p v-else-if="!config.folder_url && !config.folder_url_de && !config.folder_url_en && !dirty" class="admin-meta">{{ t('admin.off') }}</p>
 
         <div class="admin-actions">
           <button type="submit" class="btn btn-primary" :disabled="saving || !dirty">

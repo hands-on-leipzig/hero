@@ -23,9 +23,18 @@ class SharepointSettingsController extends Controller
     {
         $validated = $request->validate([
             'folder_url' => 'nullable|url|max:2000',
+            'folder_url_de' => 'nullable|url|max:2000',
+            'folder_url_en' => 'nullable|url|max:2000',
         ]);
 
-        $this->sharepoint->updateFolderUrl($validated['folder_url'] ?? null);
+        if ($request->exists('folder_url_de') || $request->exists('folder_url_en')) {
+            $this->sharepoint->updateLanguageFolderUrls(
+                $validated['folder_url_de'] ?? null,
+                $validated['folder_url_en'] ?? null,
+            );
+        } else {
+            $this->sharepoint->updateFolderUrl($validated['folder_url'] ?? null);
+        }
 
         return response()->json([
             'success' => true,

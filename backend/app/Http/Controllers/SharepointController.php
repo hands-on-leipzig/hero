@@ -14,9 +14,9 @@ class SharepointController extends Controller
         private readonly SharepointService $sharepoint,
     ) {}
 
-    public function status(): JsonResponse
+    public function status(Request $request): JsonResponse
     {
-        return response()->json($this->sharepoint->getStatus());
+        return response()->json($this->sharepoint->getStatus($request->query('lang')));
     }
 
     public function documents(Request $request): JsonResponse
@@ -28,7 +28,7 @@ class SharepointController extends Controller
         $validated = $request->validate(['item_id' => 'nullable|string|max:256']);
 
         try {
-            $data = $this->sharepoint->listFolder($validated['item_id'] ?? null);
+            $data = $this->sharepoint->listFolder($validated['item_id'] ?? null, $request->query('lang'));
 
             return response()->json(['configured' => true, ...$data]);
         } catch (\RuntimeException $e) {

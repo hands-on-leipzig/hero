@@ -61,6 +61,8 @@ class AdminSharepointTest extends TestCase
             ->assertOk()
             ->assertExactJson([
                 'folder_url' => null,
+                'folder_url_de' => null,
+                'folder_url_en' => null,
                 'folder_name' => null,
                 'has_credentials' => true,
                 'configured' => false,
@@ -88,6 +90,23 @@ class AdminSharepointTest extends TestCase
 
         $this->assertSame(self::FOLDER, Setting::get(SharepointService::SETTING_FOLDER_URL));
         $this->assertNull(Setting::get(SharepointService::SETTING_ROOT));
+    }
+
+    public function test_update_stores_separate_language_links(): void
+    {
+        $english = 'https://example.sharepoint.com/:f:/s/hero/EnFolder';
+
+        $this->putJson('/api/admin/sharepoint', [
+            'folder_url_de' => self::FOLDER,
+            'folder_url_en' => $english,
+        ], $this->bearer(['hero_admin']))
+            ->assertOk()
+            ->assertJsonPath('config.folder_url_de', self::FOLDER)
+            ->assertJsonPath('config.folder_url_en', $english)
+            ->assertJsonPath('config.folder_url', self::FOLDER);
+
+        $this->assertSame(self::FOLDER, Setting::get(SharepointService::SETTING_FOLDER_URL_DE));
+        $this->assertSame($english, Setting::get(SharepointService::SETTING_FOLDER_URL_EN));
     }
 
     public function test_update_rejects_non_url(): void
@@ -127,7 +146,11 @@ class AdminSharepointTest extends TestCase
 
         $this->postJson('/api/admin/sharepoint/test', [], $this->bearer(['hero_admin']))
             ->assertOk()
-            ->assertExactJson(['success' => true, 'folder_name' => 'HERO-Dokumente', 'item_count' => 2]);
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('folder_name', 'HERO-Dokumente')
+            ->assertJsonPath('item_count', 2)
+            ->assertJsonPath('languages.de.folder_name', 'HERO-Dokumente')
+            ->assertJsonPath('languages.en.folder_name', 'HERO-Dokumente');
 
         $this->assertSame('HERO-Dokumente', Setting::get(SharepointService::SETTING_ROOT)['name']);
     }

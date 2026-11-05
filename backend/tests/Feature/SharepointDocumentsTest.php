@@ -84,6 +84,7 @@ class SharepointDocumentsTest extends TestCase
             ->assertOk()
             ->assertExactJson([
                 'configured' => true,
+                'lang' => 'de',
                 'folder_name' => 'HERO-Dokumente',
                 'folder_url' => 'https://example.sharepoint.com/:f:/s/hero/HeroFolder',
             ]);
@@ -132,6 +133,30 @@ class SharepointDocumentsTest extends TestCase
 
         $this->getJson('/api/sharepoint/documents-file-stream?drive_id=other-drive&item_id=file-1', $this->userBearer())
             ->assertStatus(422);
+    }
+
+    public function test_page_language_selects_the_matching_folder_link(): void
+    {
+        $german = 'https://example.sharepoint.com/:f:/s/hero/DeFolder';
+        $english = 'https://example.sharepoint.com/:f:/s/hero/EnFolder';
+        Setting::put(SharepointService::SETTING_FOLDER_URL_DE, $german);
+        Setting::put(SharepointService::SETTING_FOLDER_URL_EN, $english);
+        Setting::put(SharepointService::SETTING_FOLDER_URL, null);
+        Setting::put(SharepointService::SETTING_ROOT, null);
+        Setting::put(SharepointService::SETTING_ROOTS, [
+            sha1($german) => ['id' => 'de-root', 'drive_id' => 'drive-1', 'name' => 'Deutsche Dokumente'],
+            sha1($english) => ['id' => 'en-root', 'drive_id' => 'drive-1', 'name' => 'English docs'],
+        ]);
+
+        $this->getJson('/api/sharepoint/documents?lang=de', $this->userBearer())
+            ->assertOk()
+            ->assertJsonPath('folder_web_url', $german)
+            ->assertJsonPath('breadcrumbs.0.name', 'Deutsche Dokumente');
+
+        $this->getJson('/api/sharepoint/documents?lang=en', $this->userBearer())
+            ->assertOk()
+            ->assertJsonPath('folder_web_url', $english)
+            ->assertJsonPath('breadcrumbs.0.name', 'English docs');
     }
 
     public function test_not_configured_without_link(): void
