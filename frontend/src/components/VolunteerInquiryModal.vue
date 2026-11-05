@@ -145,7 +145,7 @@ async function onSubmit() {
     <Transition name="inquiry-modal">
       <div
         v-if="show"
-        class="inquiry-backdrop"
+        class="inquiry-backdrop liquid-scrim"
         role="dialog"
         aria-modal="true"
         :aria-label="t('inquiry.title')"
@@ -247,6 +247,8 @@ async function onSubmit() {
   justify-content: center;
   padding: 1.25rem;
   background: var(--liquid-modal-scrim-bg);
+  backdrop-filter: blur(var(--liquid-modal-scrim-blur)) saturate(var(--liquid-saturate));
+  -webkit-backdrop-filter: blur(var(--liquid-modal-scrim-blur)) saturate(var(--liquid-saturate));
 }
 .inquiry-dialog {
   --inquiry-fg: #1c1917;
