@@ -13,8 +13,15 @@ class SharepointService
 
     public const SETTING_FOLDER_URL = 'sharepoint.folder_url';
 
-    /** Resolved root of the folder link: {id, drive_id, name}. Cleared when the link changes. */
+    public const SETTING_FOLDER_URL_DE = 'sharepoint.folder_url_de';
+
+    public const SETTING_FOLDER_URL_EN = 'sharepoint.folder_url_en';
+
+    /** Resolved root of the legacy folder link: {id, drive_id, name}. Cleared when the link changes. */
     public const SETTING_ROOT = 'sharepoint.root';
+
+    /** Resolved roots keyed by sha1 of the folder URL. */
+    public const SETTING_ROOTS = 'sharepoint.roots';
 
     public function hasCredentials(): bool
     {
@@ -23,30 +30,66 @@ class SharepointService
             && filled(config('hero.sharepoint.client_secret'));
     }
 
-    public function folderUrl(): ?string
+    public function normalizeLang(?string $lang): string
     {
-        return Setting::get(self::SETTING_FOLDER_URL);
+        $lang = strtolower(trim((string) $lang));
+
+        return str_starts_with($lang, 'en') ? 'en' : 'de';
+    }
+
+    public function folderUrl(?string $lang = null): ?string
+    {
+        return $this->folderUrlFor($lang);
+    }
+
+    public function folderUrlFor(?string $lang = null): ?string
+    {
+        $lang = $this->normalizeLang($lang);
+        $legacy = $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL));
+        $de = $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL_DE));
+        $en = $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL_EN));
+
+        if ($de === null && $en === null) {
+            return $legacy;
+        }
+
+        $de ??= $legacy;
+        $en ??= $legacy;
+        $primary = $lang === 'en' ? $en : $de;
+        $secondary = $lang === 'en' ? $de : $en;
+
+        return $primary ?? $secondary;
     }
 
     public function isConfigured(): bool
     {
-        return $this->hasCredentials() && filled($this->folderUrl());
+        return $this->hasCredentials() && filled($this->folderUrlFor());
     }
 
-    public function getStatus(): array
+    public function getStatus(?string $lang = null): array
     {
+        $lang = $this->normalizeLang($lang);
+        $url = $this->folderUrlFor($lang);
+        $root = $url ? $this->readCachedRoot($url) : null;
+
         return [
-            'configured' => $this->isConfigured(),
-            'folder_name' => Setting::get(self::SETTING_ROOT)['name'] ?? null,
-            'folder_url' => $this->folderUrl(),
+            'configured' => $this->isConfigured() && filled($url),
+            'lang' => $lang,
+            'folder_name' => $root['name'] ?? null,
+            'folder_url' => $url,
         ];
     }
 
     public function getAdminConfig(): array
     {
+        $deUrl = $this->folderUrlFor('de');
+        $deRoot = $deUrl ? $this->readCachedRoot($deUrl) : null;
+
         return [
-            'folder_url' => $this->folderUrl(),
-            'folder_name' => Setting::get(self::SETTING_ROOT)['name'] ?? null,
+            'folder_url' => $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL)),
+            'folder_url_de' => $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL_DE)),
+            'folder_url_en' => $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL_EN)),
+            'folder_name' => $deRoot['name'] ?? null,
             'has_credentials' => $this->hasCredentials(),
             'configured' => $this->isConfigured(),
         ];
@@ -54,26 +97,45 @@ class SharepointService
 
     public function updateFolderUrl(?string $folderUrl): void
     {
-        $folderUrl = filled($folderUrl) ? trim($folderUrl) : null;
-        if ($folderUrl === $this->folderUrl()) {
+        $folderUrl = $this->cleanUrl($folderUrl);
+        if ($folderUrl === $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL))) {
             return;
         }
 
         Setting::put(self::SETTING_FOLDER_URL, $folderUrl);
         Setting::put(self::SETTING_ROOT, null);
+        Setting::put(self::SETTING_ROOTS, null);
+    }
+
+    public function updateLanguageFolderUrls(?string $de, ?string $en): void
+    {
+        $de = $this->cleanUrl($de);
+        $en = $this->cleanUrl($en);
+        $changed = $de !== $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL_DE))
+            || $en !== $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL_EN));
+
+        Setting::put(self::SETTING_FOLDER_URL_DE, $de);
+        Setting::put(self::SETTING_FOLDER_URL_EN, $en);
+        Setting::put(self::SETTING_FOLDER_URL, $de ?? $en);
+
+        if ($changed) {
+            Setting::put(self::SETTING_ROOT, null);
+            Setting::put(self::SETTING_ROOTS, null);
+        }
     }
 
     /**
      * @return array{items: array, breadcrumbs: array, current_item_id: string, drive_id: string, folder_name: ?string, folder_web_url: ?string}
      */
-    public function listFolder(?string $itemId = null): array
+    public function listFolder(?string $itemId = null, ?string $lang = null): array
     {
-        if (! $this->isConfigured()) {
+        $folderUrl = $this->folderUrlFor($lang);
+        if (! $this->hasCredentials() || $folderUrl === null) {
             throw new \RuntimeException('SharePoint ist nicht konfiguriert.');
         }
 
         $token = $this->getAccessToken();
-        $root = $this->resolveRootFolder($token);
+        $root = $this->resolveRootFolder($token, $folderUrl);
         $driveId = $root['drive_id'];
 
         $isRoot = $itemId === null || $itemId === $root['id'];
@@ -92,8 +154,8 @@ class SharepointService
         // access that Graph's own webUrl for the item does not). Only resolve a webUrl via
         // Graph when navigating into a subfolder, where no admin link exists.
         $folderWebUrl = $isRoot
-            ? (trim((string) $this->folderUrl()) ?: $this->getItemWebUrl($driveId, $itemId, $token))
-            : ($this->getItemWebUrl($driveId, $itemId, $token) ?: trim((string) $this->folderUrl()));
+            ? ($folderUrl ?: $this->getItemWebUrl($driveId, $itemId, $token))
+            : ($this->getItemWebUrl($driveId, $itemId, $token) ?: $folderUrl);
 
         return [
             'items' => $children,
@@ -132,12 +194,49 @@ class SharepointService
 
     public function testConnection(): array
     {
-        $result = $this->listFolder();
+        if (! $this->isConfigured()) {
+            throw new \RuntimeException('SharePoint ist nicht konfiguriert.');
+        }
+
+        $languages = [];
+        $byUrl = [];
+        foreach (['de', 'en'] as $lang) {
+            $url = $this->folderUrlFor($lang);
+            if ($url === null) {
+                $languages[$lang] = ['success' => false, 'error' => 'Kein Link hinterlegt.', 'folder_url' => null];
+
+                continue;
+            }
+            if (! isset($byUrl[$url])) {
+                try {
+                    $result = $this->listFolder(null, $lang);
+                    $byUrl[$url] = [
+                        'success' => true,
+                        'folder_name' => $result['folder_name'],
+                        'item_count' => count($result['items']),
+                        'folder_url' => $url,
+                    ];
+                } catch (\RuntimeException $e) {
+                    $byUrl[$url] = [
+                        'success' => false,
+                        'error' => $e->getMessage(),
+                        'folder_url' => $url,
+                    ];
+                }
+            }
+            $languages[$lang] = $byUrl[$url];
+        }
+
+        $primary = ($languages['de']['success'] ?? false) ? $languages['de'] : ($languages['en'] ?? ['success' => false]);
+        if (! ($primary['success'] ?? false)) {
+            throw new \RuntimeException($primary['error'] ?? 'Verbindungstest fehlgeschlagen.');
+        }
 
         return [
-            'success' => true,
-            'folder_name' => $result['folder_name'],
-            'item_count' => count($result['items']),
+            'success' => ($languages['de']['success'] ?? false) && ($languages['en']['success'] ?? false),
+            'folder_name' => $primary['folder_name'] ?? null,
+            'item_count' => $primary['item_count'] ?? 0,
+            'languages' => $languages,
         ];
     }
 
@@ -179,14 +278,19 @@ class SharepointService
     /**
      * @return array{id: string, drive_id: string, name: string}
      */
-    private function resolveRootFolder(string $token): array
+    private function resolveRootFolder(string $token, ?string $folderUrl = null): array
     {
-        $cached = Setting::get(self::SETTING_ROOT);
-        if (! empty($cached['id']) && ! empty($cached['drive_id'])) {
+        $folderUrl = $this->cleanUrl($folderUrl) ?? $this->folderUrlFor();
+        if ($folderUrl === null) {
+            throw new \RuntimeException('SharePoint ist nicht konfiguriert.');
+        }
+
+        $cached = $this->readCachedRoot($folderUrl);
+        if ($cached !== null) {
             return $cached;
         }
 
-        $shareId = $this->encodeShareUrl((string) $this->folderUrl());
+        $shareId = $this->encodeShareUrl($folderUrl);
         $response = Http::withToken($token)->get(self::GRAPH_BASE."/shares/{$shareId}/driveItem");
 
         if (! $response->successful()) {
@@ -211,9 +315,74 @@ class SharepointService
         }
 
         $root = ['id' => $itemId, 'drive_id' => $driveId, 'name' => $item['name'] ?? 'Ordner'];
-        Setting::put(self::SETTING_ROOT, $root);
+        $this->writeCachedRoot($folderUrl, $root);
 
         return $root;
+    }
+
+    private function cleanUrl(mixed $url): ?string
+    {
+        if (! is_string($url)) {
+            return null;
+        }
+        $url = trim($url);
+
+        return $url !== '' ? $url : null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function configuredFolderUrls(): array
+    {
+        $urls = [];
+        foreach (['de', 'en'] as $lang) {
+            $url = $this->folderUrlFor($lang);
+            if ($url !== null) {
+                $urls[$url] = $url;
+            }
+        }
+
+        return array_values($urls);
+    }
+
+    /**
+     * @return array{id: string, drive_id: string, name: string}|null
+     */
+    private function readCachedRoot(string $url): ?array
+    {
+        $roots = Setting::get(self::SETTING_ROOTS);
+        if (is_array($roots)) {
+            $hit = $roots[sha1($url)] ?? null;
+            if (is_array($hit) && ! empty($hit['id']) && ! empty($hit['drive_id'])) {
+                return $hit;
+            }
+        }
+
+        if ($url === $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL))) {
+            $cached = Setting::get(self::SETTING_ROOT);
+            if (is_array($cached) && ! empty($cached['id']) && ! empty($cached['drive_id'])) {
+                return $cached;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array{id: string, drive_id: string, name: string}  $root
+     */
+    private function writeCachedRoot(string $url, array $root): void
+    {
+        $roots = Setting::get(self::SETTING_ROOTS);
+        if (! is_array($roots)) {
+            $roots = [];
+        }
+        $roots[sha1($url)] = $root;
+        Setting::put(self::SETTING_ROOTS, $roots);
+        if ($url === $this->cleanUrl(Setting::get(self::SETTING_FOLDER_URL))) {
+            Setting::put(self::SETTING_ROOT, $root);
+        }
     }
 
     private function encodeShareUrl(string $url): string
@@ -319,7 +488,25 @@ class SharepointService
 
     private function isItemUnderRoot(string $driveId, string $itemId, string $token): bool
     {
-        $root = $this->resolveRootFolder($token);
+        foreach ($this->configuredFolderUrls() as $folderUrl) {
+            try {
+                $root = $this->resolveRootFolder($token, $folderUrl);
+            } catch (\RuntimeException) {
+                continue;
+            }
+            if ($this->itemIsUnderRoot($driveId, $itemId, $token, $root)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array{id: string, drive_id: string, name: string}  $root
+     */
+    private function itemIsUnderRoot(string $driveId, string $itemId, string $token, array $root): bool
+    {
         if ($driveId !== $root['drive_id']) {
             return false;
         }

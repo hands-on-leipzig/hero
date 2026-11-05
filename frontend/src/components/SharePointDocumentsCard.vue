@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   DocumentsFolderList,
@@ -94,7 +94,7 @@ async function loadFolder(itemId = null) {
   loading.value = true
   error.value = ''
   try {
-    const data = await fetchSharePointDocuments(itemId)
+    const data = await fetchSharePointDocuments(itemId, locale.value)
     configured.value = data.configured ?? false
     if (data.error) {
       error.value = data.error
@@ -141,16 +141,25 @@ async function goUp() {
   await loadFolder(parent.id)
 }
 
-onMounted(async () => {
+async function refresh() {
+  error.value = ''
+  items.value = []
+  breadcrumbs.value = []
   try {
-    const status = await fetchSharePointStatus()
+    const status = await fetchSharePointStatus(locale.value)
     configured.value = status.configured ?? false
-    if (status.folder_url) folderWebUrl.value = status.folder_url
+    folderWebUrl.value = status.folder_url || ''
     if (configured.value) await loadFolder(null)
   } catch {
     configured.value = false
     error.value = t('docs.loadError')
   }
+}
+
+onMounted(refresh)
+
+watch(locale, () => {
+  refresh()
 })
 </script>
 
