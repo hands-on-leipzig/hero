@@ -20,6 +20,7 @@ import ProfileNudge from '@/components/ProfileNudge.vue'
 import logoHero from '@/assets/HERO_v1.1.png'
 import logoFll from '@/assets/FIRSTLego_IconVert_RGB.png'
 import logoHot from '@/assets/hot.png'
+import HeroAppSwitch from '@/components/HeroAppSwitch.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -95,15 +96,21 @@ function goHome() {
     @update:open="onShellOpen"
   >
     <template #brand>
-      <RouterLink to="/" class="glass-sidebar__brand hero-brand" @click="goHome">
-        <img class="glass-sidebar__brand-logo" :src="logoHero" alt="HERO" />
-      </RouterLink>
+      <div class="hero-brand-line">
+        <RouterLink to="/" class="hero-brand" @click="goHome">
+          <img class="glass-sidebar__brand-logo" :src="logoHero" alt="HERO" />
+        </RouterLink>
+        <HeroAppSwitch />
+      </div>
     </template>
 
     <template #mobile-top>
-      <RouterLink to="/" class="glass-sidebar__brand hero-brand" @click="goHome">
-        <img class="glass-sidebar__brand-logo" :src="logoHero" alt="HERO" />
-      </RouterLink>
+      <div class="hero-brand-line">
+        <RouterLink to="/" class="hero-brand" @click="goHome">
+          <img class="glass-sidebar__brand-logo" :src="logoHero" alt="HERO" />
+        </RouterLink>
+        <HeroAppSwitch />
+      </div>
     </template>
 
     <template #mobile-tabs="{ open, toggle }">
@@ -321,5 +328,27 @@ function goHome() {
 
 .sidebar-login-btn .glass-sidebar__item-icon .bi {
   font-size: 1.2rem;
+}
+
+.hero-brand-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.hero-brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.hero-brand .glass-sidebar__brand-logo {
+  width: auto;
+  max-width: 7.5rem;
+  max-height: 1.7rem;
+  object-position: left center;
 }
 </style>
