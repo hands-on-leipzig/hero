@@ -314,6 +314,22 @@ onMounted(loadEvents)
   to { transform: rotate(360deg); }
 }
 
+@media (max-width: 768px) {
+  .venues-main {
+    padding: 0.75rem 0.15rem 1.25rem;
+  }
+
+  .venues-hero {
+    margin-bottom: 0.85rem;
+    padding: 0.95rem 0.95rem;
+  }
+
+  .venues-title {
+    font-size: var(--text-2xl);
+    margin-bottom: 0.4rem;
+  }
+}
+
 @media (max-width: 640px) {
   .venues-hero-layout {
     flex-direction: column;
@@ -324,7 +340,7 @@ onMounted(loadEvents)
   }
 
   .venues-hero-logo {
-    height: 4.5rem;
+    height: 2.75rem;
   }
 }
 </style>

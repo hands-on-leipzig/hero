@@ -218,6 +218,24 @@ div.home-stat {
 }
 
 @media (max-width: 720px) {
+  .home {
+    gap: 0.85rem;
+    padding: 0.75rem 0.15rem 1.25rem;
+  }
+
+  .home-overview {
+    padding: 0.95rem 0.95rem 0.85rem;
+  }
+
+  .home-overview__head {
+    gap: 0.65rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .home-overview__title {
+    font-size: var(--text-2xl, 1.5rem);
+  }
+
   .home-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

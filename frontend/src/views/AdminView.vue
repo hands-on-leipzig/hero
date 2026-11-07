@@ -261,4 +261,14 @@ onMounted(load)
 @keyframes admin-spin {
   to { transform: rotate(360deg); }
 }
+
+@media (max-width: 768px) {
+  .admin-page {
+    gap: 0.85rem;
+  }
+
+  .admin-hero {
+    padding: 0.95rem 0.95rem;
+  }
+}
 </style>

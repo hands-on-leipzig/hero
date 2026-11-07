@@ -39,6 +39,17 @@
   overflow: hidden;
 }
 
+@media (max-width: 768px) {
+  .hero-page h1 {
+    font-size: var(--text-2xl);
+    margin-bottom: 0.3rem;
+  }
+
+  .hero-card {
+    padding: 0.9rem 0.95rem 1rem;
+  }
+}
+
 .hero-card.liquid-surface-inner {
   border-color: color-mix(in srgb, var(--color-border-strong) 40%, var(--liquid-border-soft));
   background: color-mix(in srgb, #ffffff 88%, var(--liquid-tile-bg-inner));
